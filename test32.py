@@ -10,15 +10,14 @@ import pwn
 
 import utils
 
-
 babymalloc = "/home/jasper/university/pythonptracetesterei/scripts/babymalloc"
 
 
 def insertCode(process: type_ptraceproc, ad):
     code = """
-		mov eax,57  # fork 
-		syscall
-		int3	"""
+        mov eax,57  # fork 
+        syscall
+        int3	"""
 
     code = pwn.asm(code)
     process.writeBytes(ad, code)
@@ -85,17 +84,19 @@ def debugger_example(pid):
 r = None
 p = None
 
+import pathlib
+
+workingpath = str(pathlib.Path().absolute())
+
 
 def main():
-    args = ["/home/jasper/university/pythonptracetesterei/scripts/babymalloc"]
-    child_popen = subprocess.Popen(args)
-    debugger_example(child_popen.pid)
+    args = []
+    args.append(workingpath + "/launcher/dummylauncher")
+    args.append(workingpath + "/launcher/testmalloc")
 
-    print("sleeping")
-    time.sleep(2)
-    print("sleep done")
-    child_popen.kill()
-    child_popen.wait()
+    with subprocess.Popen(args) as child:
+        debugger_example(child.pid)
+        child.kill()
 
 
 if __name__ == "__main__":
