@@ -129,6 +129,8 @@ def main():
     # args.append("/bin/echo")
     # args.append("hello")
 
+    p=utils.Process(args)
+
     with subprocess.Popen(args) as child:
         try:
             print(child.pid)
