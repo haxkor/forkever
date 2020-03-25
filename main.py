@@ -71,7 +71,7 @@ def debugger_example(pid):
     process.setoptions(0x6)
 
 
-    utils.forkProcess(process)
+    #utils.forkProcess(process)
 
 
     # getHeapAsBytes(process.pid, True)
@@ -129,7 +129,6 @@ def main():
     # args.append("/bin/echo")
     # args.append("hello")
 
-    p=utils.Process(args)
 
     with subprocess.Popen(args) as child:
         try:
