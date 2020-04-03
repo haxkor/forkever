@@ -20,3 +20,34 @@ def getHeapAsBytes(pid, printall=False):
 
 
 
+
+from socket import socket, AF_UNIX, SOCK_STREAM
+from struct import pack, unpack
+class HyxTalker():
+    def __init__(self):
+        self.rootsock = socket(AF_UNIX, SOCK_STREAM)
+        self.rootsock.bind("mystupidsock")
+        self.rootsock.listen(3)
+        self.rootsock.accept()
+
+        self.
+
+
+    def makeChangeStruct(start, data):
+        ret=pack("<I",start)
+        ret+= pack("<I",len(data))
+        ret+= data
+
+        return ret
+
+    def sendUpdates(tuplelist):
+        code=b"\x01"
+        code+= pack("<I", len(tuplelist))
+
+        code+= b"".join( makeChangeStruct(start,data) for (start,data) in tuplelist)
+
+        return newsock.send(code)
+
+
+
+
