@@ -1,147 +1,110 @@
-from ptrace.debugger.process import PtraceProcess
-import ptrace.logging_tools
-import time
-import subprocess
-import signal
-import ptrace.debugger
-import pwn
-import ptrace.debugger.ptrace_signal as procsignal
+from PollableQueue import PollableQueue
+from threading import Thread
+from InputReader import mainReader
 
-import utils
+from ProcIOWrapper import ProcessIOWrapper
+from select import poll, POLLIN,POLLERR,POLLPRI
 
-babymalloc = "/home/jasper/university/pythonptracetesterei/scripts/babymalloc"
+from subprocess import Popen
 
-
-def insertCode(process: PtraceProcess, ad):
-    code = """
-        mov eax,57  # fork 
-        syscall
-        int3	"""
-
-    code = pwn.asm(code)
-    process.writeBytes(ad, code)
-
-
-def getHeapAsBytes(pid, printall=False):
-    with open("/proc/%d/maps" % pid, "rb") as maps:
-        # print(maps.read(200000))
-        buf = maps.readlines()
-
-        for l in buf:
-            if b"heap" in l or printall:
-                print(l)
-
-
-def debugger_example(pid):
-    debugger = ptrace.debugger.PtraceDebugger()
-
-    print("debugger created")
-    process = debugger.addProcess(pid, False, seize=True)
-    utils.changeLogHandler()
-    print("process seized")
-
-    print("in main, before interrupting")
-
-    process.interrupt()
-
-    print("process interrupted")
-    print(debugger.options)
-    debugger.traceFork()
-    debugger.traceExec()
-    process.setoptions(debugger.options)
-    print("options=", debugger.options)
-
-    go_ad = launchelf.symbols["go"]
-    process.writeBytes(go_ad, b"gogo")
-
-    process.cont()
-    time.sleep(1)
-
-    print("process continues")
-
-    print("waiting for signals")
-
-    # because of the waitsignals implementation, the event is not
-    # expected and therefore raised. this way, we wait for our correct event
-    try:
-        process.waitSignals()
-    except ptrace.debugger.process_event.ProcessExecution:
-        print("programm execd new program")
-
-    process.setoptions(0x6)
-
-
-    #utils.forkProcess(process)
-
-
-    # getHeapAsBytes(process.pid, True)
-    # utils.changeLogHandler()    # debugger.addProcess messes up the pwntools logging
-    print("instr pointer= %x" % process.getInstrPointer())
-    print("setting breakpoint\n\n")
-    malloc_plt = hackelf.symbols["plt.malloc"]
-    process.createBreakpoint(malloc_plt)
-
-    process.cont()
-    print("now it should hit the breakpoint")
-
-    print(process.pid)
-
-    try:
-        process.waitSignals(signal.SIGTRAP)
-
-    except procsignal.ProcessSignal as psignal:
-        import cptrace
-        print("aight we trying both processes")
-
-    # getHeapAsBytes(process.pid, True)
-
-    print("IP after: %#x\n\n\n" % process.getInstrPointer())
-    time.sleep(4)
-
-    tomalloc = int(input("\n\n\nrdi= ?"))
-    print(tomalloc)
-    process.setreg("rdi", tomalloc)
-
-    process.cont()
-    time.sleep(8)
-
-    getHeapAsBytes(process.pid, True)
-    process.detach()
-    debugger.quit()
+from ptrace.debugger import PtraceDebugger
 
 
 
-import pathlib
+hyx_path= "/"
 
-workingpath = str(pathlib.Path().absolute())
-hackpath = workingpath + "/launcher/babymalloc"
+path_launcher = "/launcher/dummylauncher"
+path_tohack = "/launcher/babymalloc"
 
-launchelf = pwn.ELF(workingpath + "/launcher/dummylauncher")
-hackelf = pwn.ELF(hackpath)
 
 
 def main():
-    print("in main")
-    args = []
-    args.append(workingpath + "/launcher/dummylauncher")
-    args.append(hackpath)
 
-    # args.append("/bin/echo")
-    # args.append("hello")
+    stdinQ=PollableQueue()
+    reader_thread= Thread(target=mainReader, args=(stdinQ,))
+    reader_thread.start()
 
+    args=[path_launcher, path_tohack]
 
-    with subprocess.Popen(args) as child:
-        try:
-            print(child.pid)
-            debugger_example(child.pid)
-            child.kill()
-        except Exception as e:
-            raise e
-        except ptrace.debugger.ptrace_signal.ProcessSignal as p:
-            raise p
+    tohack= ProcessIOWrapper(args)
 
 
-if __name__ == "__main__":
-    # pwn.asm(utils.codeWriteEax,arch="amd64")
+    # setupProcess()
+    #attach everything, then (maybe) launch hyx
 
-    main()
+
+
+
+
+    # input loop
+
+    todopoll = poll()
+    mask= POLLERR | POLLPRI | POLLIN
+    todopoll.register(stdinQ.fileno(),mask)
+    todopoll.register(hyxfd,mask)
+    todopoll.register(tohack.out_pipe.readobj.fileno())
+
+    quit_var= False
+    while not quit_var:
+        pollresult= todopoll.poll()
+
+        assert len(pollresult) > 0
+
+        if len(pollresult) == 1:
+            pollfd= pollresult[0][0]
+            if hyxfd == pollfd:
+                handle("hyx", pollresult[0])
+
+            elif stdinQ.fileno() in poll:
+                handle("stdin", pollresult[0])
+            elif True:
+                handle("debug", pollresult[0])
+
+        else:
+            raise NotImplementedError
+
+
+
+
+
+debugger=None
+
+
+import pwn
+from ptrace.debugger.process_event import ProcessExecution
+def setupProcess(procWrap: ProcessIOWrapper):
+    global debugger
+    debugger= PtraceDebugger()
+    debugger.traceFork()
+    debugger.traceExec()
+
+    ptrace_proc= debugger.addProcess(procWrap.process.pid, is_attached=False, seize=True)
+    ptrace_proc.interrupt() # seize does not automatically interrupt the process
+    ptrace_proc.setoptions(debugger.options)
+
+    launcher_ELF= pwn.ELF(path_launcher)    # get ready to launch
+    ad=launcher_ELF.symbols["go"]
+    ptrace_proc.writeBytes(ad, b"gogo")
+
+    # process will be interrupted after new execution
+    ptrace_proc.cont()
+    assert ptrace_proc.waitEvent() == ProcessExecution
+    return ptrace_proc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

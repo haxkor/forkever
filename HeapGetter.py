@@ -32,21 +32,20 @@ from struct import pack, unpack
 
 
 class HyxTalker():
-    def __init__(self):
+    def __init__(self, path_mem,heap_start):
         self.rootsock = socket(AF_UNIX, SOCK_STREAM)
         self.rootsock.bind("mystupidsock")
         self.rootsock.listen(3)
         self.hyxsock, _ = self.rootsock.accept()
 
-        self.path_mem = "m"
-        self.heap_start = 1
+        self.path_mem = path_mem
+        self.heap_start = heap_start
 
     def sendUpdates(self, tuplelist):
         def makeChangeStruct(start, data):
             ret = pack("<I", start)
             ret += pack("<I", len(data))
             ret += data
-
             return ret
 
         code = b"\x01"
@@ -59,7 +58,7 @@ class HyxTalker():
     def getUpdate(self):
         sock = self.hyxsock
         check = sock.recv(1)
-        assert (check in (UPD_FROMBLOB, UPD_FROMBLOBNEXT))
+        assert check in (UPD_FROMBLOB, UPD_FROMBLOBNEXT)
 
         length = unpack("<I", sock.recv(SZ_SIZET))[0]
         if check != UPD_FROMBLOBNEXT:
@@ -80,3 +79,6 @@ class HyxTalker():
                 mem.seek(self.heap_start + pos)
                 mem.write(data)
 
+
+if __name__ == "__main__" :
+    talker= HyxTalker()

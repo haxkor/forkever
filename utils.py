@@ -3,7 +3,6 @@ import os
 import logging
 import pwn
 
-import subprocess
 
 
 def timestamp():
@@ -54,14 +53,6 @@ mov rax, 57     # fork
 syscall
 nop
 """
-
-
-def setregs(process, args):
-    for (reg, val) in args:
-        process.setreg(reg, val)
-
-
-mmapargs = [("rdi", 0), ("rsi", 0x1000), ("rdx", 7), ("r10", 0x20), ("r8", 0), ("r9", 0)]
 
 
 def changeLogHandler():

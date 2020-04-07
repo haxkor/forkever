@@ -5,6 +5,7 @@ import subprocess
 import signal
 import ptrace.debugger
 import pwn
+import ptrace.debugger.ptrace_signal as procsignal
 
 import utils
 
@@ -69,80 +70,9 @@ def debugger_example(pid):
 
     process.setoptions(0x6)
 
-    ###############
 
-    oldpid = process.pid
-    ip = process.getInstrPointer()
+    #utils.forkProcess(process)
 
-    print(pwn.disasm(process.readBytes(ip, 1000)))
-    # inject = pwn.asm("nop\nnop\nnop\nsyscall\nnop\nnop\nnop")
-    injectcode = "syscall\n" * 3 + "int3"
-    injectcode = utils.codeWriteEax
-    inject = pwn.asm(injectcode, arch="amd64")
-
-
-    original = process.readBytes(ip, 10 * len(inject))
-    print("in inject, ip=", hex(ip))
-
-    process.writeBytes(ip, inject)
-
-    nextcode = pwn.disasm(process.readBytes(ip, len(inject)))
-    print("next up:", hex(ip), len(inject), nextcode)
-
-    #process.setreg("rax", 57)  # syscall fork
-    #print(process.getreg(("rax")))
-
-    # process.singleStep()
-    print("continuing now! \n")
-    process.cont()
-    PTRACE_EVENT_STOP = 0x80
-
-    import os
-    # os.waitpid(process.pid, 0x80)
-
-    # process.waitSignals(PTRACE_EVENT_STOP)  # from the parent process
-
-    # event= process.ptraceEvent()
-    # event= debugger.waitProcessEvent()
-
-    import os
-    event = os.waitpid(process.pid, 0)
-    print("got event_stop", event, "pid=", process.pid)
-
-    print(hex(process.getInstrPointer()))
-
-    # event= debugger.waitProcessEvent()
-    # print("got event_stop", event)
-
-    # now syscall
-
-    ip = process.getInstrPointer()
-    nextcode = pwn.disasm(process.readBytes(ip, 19))
-    print(hex(ip), len(inject), nextcode)
-
-    msg = b"A" * 8 + b"xx"  # b"AAAAAAAA\xab" + b"\x00"  + b"\xcdaaaaaaa"
-    msg_ad = id(msg) + 32
-
-    import ctypes
-    # print("msg= ", ctypes.string_at(msg_ad+ 32,80))
-    time.sleep(1)
-    PTRACE_GETEVENTMSG = 0x4201
-    process.ptrace(PTRACE_GETEVENTMSG, oldpid, 0, msg_ad)  # store
-
-    time.sleep(.1)
-    import struct
-    newpid = struct.unpack("<Q", ctypes.string_at(msg_ad, 8))
-    print("newpid=%d oldpid=%d" % (newpid[0], oldpid))
-
-    # time.sleep(1)
-    ip2 = process.getInstrPointer()
-    print("ip2=", hex(ip2))
-    print(process.getreg(("rax")))
-
-    print(process.pid)
-    #    parent = PtraceProcess.ptrace(0x4206, process.pid, 0,0)
-
-    #################
 
     # getHeapAsBytes(process.pid, True)
     # utils.changeLogHandler()    # debugger.addProcess messes up the pwntools logging
@@ -154,26 +84,31 @@ def debugger_example(pid):
     process.cont()
     print("now it should hit the breakpoint")
 
-    process.waitSignals(signal.SIGTRAP)
+    print(process.pid)
+
+    try:
+        process.waitSignals(signal.SIGTRAP)
+
+    except procsignal.ProcessSignal as psignal:
+        import cptrace
+        print("aight we trying both processes")
+
     # getHeapAsBytes(process.pid, True)
 
     print("IP after: %#x\n\n\n" % process.getInstrPointer())
-    time.sleep(1)
+    time.sleep(4)
 
     tomalloc = int(input("\n\n\nrdi= ?"))
     print(tomalloc)
     process.setreg("rdi", tomalloc)
 
     process.cont()
-    time.sleep(2)
+    time.sleep(8)
 
     getHeapAsBytes(process.pid, True)
     process.detach()
     debugger.quit()
 
-
-def injectsyscall(process: PtraceProcess):
-    pass
 
 
 import pathlib
@@ -194,10 +129,16 @@ def main():
     # args.append("/bin/echo")
     # args.append("hello")
 
+
     with subprocess.Popen(args) as child:
-        print(child.pid)
-        debugger_example(child.pid)
-        child.kill()
+        try:
+            print(child.pid)
+            debugger_example(child.pid)
+            child.kill()
+        except Exception as e:
+            raise e
+        except ptrace.debugger.ptrace_signal.ProcessSignal as p:
+            raise p
 
 
 if __name__ == "__main__":

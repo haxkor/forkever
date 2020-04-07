@@ -69,7 +69,10 @@ class ProcessIOWrapper:
     def write(self, text):
         return self.in_pipe.write(text)
 
-    def read(self, n, start=None):
-        return self.out_pipe.read(n)
+    def read(self, n, channel="out"):
+        if channel == "out":
+            return self.out_pipe.read(n)
+        else:
+            return self.err_pipe.read(n)
 
 
