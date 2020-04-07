@@ -29,20 +29,8 @@ class Pipe:
         return result
 
     def read(self, n):
-        if _control:
-            controlstr = b"this_was_flushed"
-            controllen = len(controlstr)
-
-            self.writeobj.write(controlstr)
-            time.sleep(.001)
-            self.writeobj.flush()
-
-            result = self.readobj.read(n+controllen)
-            assert result[-controllen:] == controlstr
-            return result[:-controllen]
-        else:
-            self.writeobj.flush()
-            return self.readobj.read(n)
+        self.writeobj.flush()
+        return self.readobj.read(n)
 
 
 class ProcessIOWrapper:
