@@ -22,7 +22,8 @@ path_tohack = "/launcher/babymalloc"
 
 
 class Paula():
-    def __init__(self):
+    def __init__(self, socketname):
+        self.socketname= socketname
 
         self.stdinQ=PollableQueue()
         self.reader_thread= Thread(target=mainReader, args=(self.stdinQ,))
@@ -69,14 +70,13 @@ class Paula():
 
 
     # this is called when a new line has been put to the stdinQ
-
     def handle_stdin(self,pollresult):
         from HyxTalker import HyxTalker
         fd, events= pollresult
         cmd= self.stdinQ.get()
 
         if cmd == "hyx":
-            self.hyxTalker= HyxTalker()
+            self.hyxTalker= HyxTalker(self.socketname)
 
 
 
@@ -86,6 +86,9 @@ class Paula():
         # check events here
 
         check= self.hyxTalker.hyxsock.recv(1)
+
+
+
 
 
 

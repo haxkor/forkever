@@ -7,26 +7,33 @@ UPD_FROMBLOBNEXT = b"\x41"
 UPD_FROMPAULA = b"\x01"
 SZ_SIZET = 8
 
-class HyxTalker():
-    def __init__(self, path_mem, heap_start):
-        self.rootsock = socket(AF_UNIX, SOCK_STREAM)
-        self.rootsock.bind("mystupidsock")
+hyx_path = "/home/jasper/github/hyxWIPclion/hyx-0.1.5/myhyx"
+import os
 
-        self.launchHyx()
+
+class HyxTalker():
+    def __init__(self, socketname, filepath, offset):
+        self.rootsock = socket(AF_UNIX, SOCK_STREAM)
+
+        try:
+            os.unlink(socketname)
+        except FileNotFoundError:
+            pass
+        self.rootsock.bind(socketname)
+
+        self.hyxprocess=self.launchHyx(filepath, offset, socketname)
 
         self.rootsock.listen(3)
         self.hyxsock, _ = self.rootsock.accept()
 
-        self.path_mem = path_mem
-        self.heap_start = heap_start
-
-    def launchHyx(self):
+    def launchHyx(self, filepath, offset, socketname):
+        def argsStr(args):
+            return "".join(arg + " " for arg in args)
         # prepare args
-        heapStart = 1
-        socketadr = ""
-        file = heapcopy
         args = ["x-terminal-emulator", "-e",
-                hyx_path, "-offset", str(heapStart), "-socket", socketadr]
+                hyx_path, "-offset", hex(offset), "-socket", socketname, filepath]
+
+        print(argsStr(args))
         return Popen(args)
 
     def sendUpdates(self, tuplelist):
