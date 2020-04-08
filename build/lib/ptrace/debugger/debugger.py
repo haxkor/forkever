@@ -69,7 +69,7 @@ class PtraceDebugger(object):
         self.use_sysgood = False
         self.enableSysgood()
 
-    def addProcess(self, pid, is_attached, parent=None, is_thread=False):
+    def addProcess(self, pid, is_attached, parent=None, is_thread=False, seize=False):
         """
         Add a new process using its identifier. Use is_attached=False to
         attach an existing (running) process, and is_attached=True to trace
@@ -78,25 +78,26 @@ class PtraceDebugger(object):
         if pid in self.dict:
             raise KeyError("The process %s is already registered!" % pid)
         process = PtraceProcess(self, pid, is_attached,
-                                parent=parent, is_thread=is_thread)
+                                parent=parent, is_thread=is_thread, seize=seize)
         info("Attach %s to debugger" % process)
         self.dict[pid] = process
         self.list.append(process)
-        try:
-            process.waitSignals(SIGTRAP, SIGSTOP)
-        except KeyboardInterrupt:
-            error(
-                "User interrupt! Force the process %s attach "
-                "(don't wait for signals)."
-                % pid)
-        except ProcessSignal as event:
-            event.display()
-        except:   # noqa: E722
-            process.is_attached = False
-            process.detach()
-            raise
-        if HAS_PTRACE_EVENTS and self.options:
-            process.setoptions(self.options)
+        if not seize:
+            try:
+                process.waitSignals(SIGTRAP, SIGSTOP)
+            except KeyboardInterrupt:
+                error(
+                    "User interrupt! Force the process %s attach "
+                    "(don't wait for signals)."
+                    % pid)
+            except ProcessSignal as event:
+                event.display()
+            except:   # noqa: E722
+                process.is_attached = False
+                process.detach()
+                raise
+            if HAS_PTRACE_EVENTS and self.options:
+                process.setoptions(self.options)
         return process
 
     def quit(self):

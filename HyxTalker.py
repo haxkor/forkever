@@ -36,6 +36,9 @@ class HyxTalker():
         print(argsStr(args))
         return Popen(args)
 
+    def getSockFd(self):
+        return self.hyxsock.fileno()
+
     def sendUpdates(self, tuplelist):
         def makeChangeStruct(start, data):
             ret = pack("<I", start)
