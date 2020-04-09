@@ -2,7 +2,7 @@ from PollableQueue import PollableQueue
 from threading import Thread
 from InputReader import mainReader
 
-from ProcIOWrapper import ProcessWrapper
+from ProcessWrapper import ProcessWrapper
 from select import poll, POLLIN, POLLERR, POLLPRI
 
 from subprocess import Popen
@@ -18,7 +18,6 @@ path_launcher = "launcher/dummylauncher"
 path_tohack = "launcher/babymalloc"
 socketname = "/tmp/paulasock"
 
-from HeapGetter import HeapWriter
 
 from PaulaPoll import PaulaPoll
 
