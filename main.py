@@ -28,7 +28,9 @@ class Paula():
         self.inputPoll = PaulaPoll()
 
         self.stdinQ = PollableQueue()
-        self.inputPoll.register(self.stdinQ.fileno(), "userinput")
+
+        mask = POLLERR | POLLPRI | POLLIN
+        self.inputPoll.register(self.stdinQ.fileno(), "userinput", mask)
 
         self.reader_thread = Thread(target=mainReader, args=(self.stdinQ,))
         self.reader_thread.start()
@@ -44,8 +46,6 @@ class Paula():
     def inputLoop(self):
         # input loop
 
-        mask = POLLERR | POLLPRI | POLLIN
-        self.inputPoll.register(self.stdinQ.fileno(), mask)
 
         self.quit_var = False
         while not self.quit_var:
@@ -59,19 +59,26 @@ class Paula():
                     pass
                 elif name == "userinput":
                     self.handle_stdin(pollfd,event)
-                elif True:
+                elif "-out" in name:
+                    self.handle_procout(name,pollfd,event)
                     pass
 
             else:
+                print(pollresult)
                 raise NotImplementedError
 
     # this is called when a new line has been put to the stdinQ
     def handle_stdin(self, fd,event):
         cmd = self.stdinQ.get()
+        cmd= cmd[:-1]
+
 
         if cmd == "hyx" and not self.hyxTalker:
+            print("gonna launch hyx")
+
             # TODO
             self.init_hyx()
+        print(cmd)
 
     def handle_hyx(self, pollresult):
         fd, events = pollresult
@@ -79,6 +86,11 @@ class Paula():
         # check events here
 
         check = self.hyxTalker.hyxsock.recv(1)
+
+    def handle_procout(self,name,fd,event):
+        procWrap=self.processList[0]
+        assert isinstance(procWrap, ProcessWrapper)
+        print("proc %s wrote: " % name,  procWrap.out_pipe.read(100))
 
     def addProcess(self,proc:ProcessWrapper):
         self.processList.append(proc)
@@ -112,5 +124,10 @@ class Paula():
 if __name__ == "__main__":
 
     p=Paula(socketname)
-    p.inputPoll()
+    try:
+        p.inputLoop()
+    except EOFError:    #KeyboardInterrupt:
+        print("exit")
+        exit(5)
+
 

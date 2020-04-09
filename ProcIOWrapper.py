@@ -43,7 +43,9 @@ class ProcessWrapper:
             self.ptraceProcess = ptraceprocess
 
     def setupPtraceProcess(self):
+        from ptrace.debugger.debugger import PtraceDebugger
 
+        assert isinstance(self.debugger, PtraceDebugger)
         ptrace_proc = self.debugger.addProcess(self.popen_obj.pid, is_attached=False, seize=True)
         ptrace_proc.interrupt()  # seize does not automatically interrupt the process
         ptrace_proc.setoptions(self.debugger.options)
@@ -52,9 +54,9 @@ class ProcessWrapper:
         ad = launcher_ELF.symbols["go"]
         ptrace_proc.writeBytes(ad, b"gogo")
 
-        # process will be interrupted after new execution
+        # process will be interrupted after new execution   # TODO put this functionality into ptrace, addprocess?
         ptrace_proc.cont()
-        assert ptrace_proc.waitEvent() == ProcessExecution
+        assert isinstance(ptrace_proc.waitEvent(),ProcessExecution)
 
         return ptrace_proc
 
