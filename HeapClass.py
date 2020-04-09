@@ -5,10 +5,9 @@ from re import findall
 class Heap:
 
     def __init__(self, pid):
+        self.pid= pid
         self.start, self.stop = self.getHeap_startstop()
 
-
-        self.pid= pid
         self.file_path = tmppath + "heapcopy%d" % pid
 
 
@@ -20,6 +19,10 @@ class Heap:
         with open("/proc/%d/maps" % self.pid, "r") as maps:
             f = lambda l: "[heap]" in l     # filter for the one line we care about
             start_end_tuple = list(getStart(line) for line in filter(f, maps.readlines()))
+
+
+            if len(start_end_tuple) == 0:
+                raise KeyError("no heap")
 
             assert len(start_end_tuple) == 1    # make sure there is only one segment
             start, end = start_end_tuple[0]

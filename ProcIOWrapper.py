@@ -7,6 +7,8 @@ import pwn
 from subprocess import Popen
 from utils import path_launcher
 
+from HeapClass import Heap
+
 
 class ProcessWrapper:
     """Provides an easy way to redirect stdout and stderr using pipes. Write to the processes STDIN and read from STDOUT at any time! """
@@ -32,7 +34,12 @@ class ProcessWrapper:
             self.popen_obj = Popen(args, stdin=self.in_pipe.readobj, stdout=stdout_arg, stderr=stderr_arg)
 
             self.debugger = debugger
-            self.ptraceProcess = self.setupPtraceProcess()
+            self.ptraceProcess = self.setupPtraceProcess()  #launches actual program, halts immediately
+
+            self.heap= None     #Heap(self.ptraceProcess.pid)
+
+
+
         else:
             assert isinstance(parent, ProcessWrapper) and isinstance(ptraceprocess, PtraceProcess)
             self.in_pipe = parent.in_pipe.dupe()  # TODO
@@ -78,6 +85,9 @@ class ProcessWrapper:
             return self.in_pipe.fileno("write")
         else:
             raise KeyError("specify which")
+
+    def getPid(self):
+        return self.ptraceProcess.pid
 
     def forkProcess(self):
         process = self.ptraceProcess

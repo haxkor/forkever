@@ -71,14 +71,11 @@ class Paula():
     def handle_stdin(self, fd,event):
         cmd = self.stdinQ.get()
         cmd= cmd[:-1]
+        print(cmd)
 
 
         if cmd == "hyx" and not self.hyxTalker:
-            print("gonna launch hyx")
-
-            # TODO
             self.init_hyx()
-        print(cmd)
 
     def handle_hyx(self, pollresult):
         fd, events = pollresult
@@ -114,6 +111,15 @@ class Paula():
         from HyxTalker import HyxTalker
         assert len(self.processList) == 1
         procWrap = self.processList[0]
+
+        if procWrap.heap is None:
+            from HeapClass import Heap
+            try:
+                procWrap.heap= Heap(procWrap.getPid())
+            except KeyError:
+                print("there is no heap yet, not starting hyx.")
+                return
+
         file_path = procWrap.heap.file_path
         offset= procWrap.heap.start
         self.hyxTalker= HyxTalker(socketname, file_path, offset )
