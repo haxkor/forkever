@@ -79,6 +79,7 @@ def debugger_example(pid):
     print("instr pointer= %x" % process.getInstrPointer())
     print("setting breakpoint\n\n")
     malloc_plt = hackelf.symbols["plt.malloc"]
+    print("bp at %x" % malloc_plt)
     process.createBreakpoint(malloc_plt)
 
     process.cont()

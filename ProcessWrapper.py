@@ -23,6 +23,10 @@ class ProcessWrapper:
             self.out_pipe = Pipe()
             self.err_pipe = Pipe()
 
+            self.stdin_buf=b""
+            self.stdout_buf=b""
+            self.stderr_buf=b""
+
             # if we want to redirect, tell the subprocess to write to our pipe, else it will print to normal stdout
             if redirect:
                 stdout_arg = self.out_pipe.writeobj
@@ -67,14 +71,35 @@ class ProcessWrapper:
 
         return ptrace_proc
 
-    def write(self, text):
-        return self.in_pipe.write(text)
+    def addBreakpoints(self, *bp_list):
+        def addSingleBP(breakpoint):
+            self.ptraceProcess.createBreakpoint(breakpoint)
+        for bp in bp_list:
+            addSingleBP(bp)
+
+
+    def writeToBuf(self, text):
+        """write to the processes stdin buffer, awaiting read syscall"""
+        self.stdin_buf += text
+
+    def writeBufToPipe(self, n:int):
+        """write N bytes to the stdin pipe"""
+        towrite= self.stdin_buf[0:n]
+        self.stdin_buf= self.stdin_buf[n:]
+        return self.in_pipe.write(towrite)
+
 
     def read(self, n, channel="out"):
         if channel == "out":
-            return self.out_pipe.read(n)
+            ret= self.out_pipe.read(n)
+            self.stdout_buf += ret
+            return ret
+        elif channel == "err":
+            ret= self.err_pipe.read(n)
+            self.stderr_buf += ret
+            return ret
         else:
-            return self.err_pipe.read(n)
+            raise KeyError
 
     def getfileno(self,which):
         if which == "err":
@@ -89,9 +114,13 @@ class ProcessWrapper:
     def getPid(self):
         return self.ptraceProcess.pid
 
+    def setHeap(self):
+        if self.heap is None:
+            self.heap= Heap(self.getPid())
+
     def forkProcess(self):
         process = self.ptraceProcess
-        ip = process.getInstrPointer()
+        ip = process.gmainetInstrPointer()
         regs = process.getregs()
 
         injectcode = codeWriteEax
