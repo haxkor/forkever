@@ -65,15 +65,14 @@ class ProcessWrapper:
         ad = launcher_ELF.symbols["go"]
         ptrace_proc.writeBytes(ad, b"gogo")
 
-        # process will be interrupted after new execution   # TODO put this functionality into ptrace, addprocess?
         ptrace_proc.cont()
-        assert isinstance(ptrace_proc.waitEvent(),ProcessExecution)
+        assert isinstance(ptrace_proc.waitEvent(),ProcessExecution) # execve is hit
 
         return ptrace_proc
 
     def addBreakpoints(self, *bp_list):
         def addSingleBP(breakpoint):
-            self.ptraceProcess.createBreakpoint(breakpoint)
+            self.ptraceProcess.crepaulaateBreakpoint(breakpoint)
         for bp in bp_list:
             addSingleBP(bp)
 

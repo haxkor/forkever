@@ -12,7 +12,7 @@ class InputHandler:
 
     def __init__(self):
         self.inputPoll = PaulaPoll()
-        self.paula = ProcessManager("/tmp/paulasock", self.inputPoll)
+        self.manager = ProcessManager("/tmp/paulasock", self.inputPoll)
 
         self.stdinQ = PollableQueue()
         self.inputPoll.register(self.stdinQ.fileno(), "userinput")
@@ -53,12 +53,16 @@ class InputHandler:
             self.init_hyx()
 
         elif cmd.startswith("b"):
-            proc = self.paula.getCurrentProcess().ptraceProcess
+            proc = self.manager.getCurrentProcess().ptraceProcess
             print("%x" % proc.getInstrPointer())
 
             bp_ad = int(cmd[1:], 16)
             proc.createBreakpoint(bp_ad)
             print("breakpoint set at %x" % bp_ad)
+
+        elif cmd.startswith("c"):   # continue
+            self.manager.cont()
+
 
     def handle_hyx(self, pollresult):
         raise NotImplementedError
@@ -66,13 +70,13 @@ class InputHandler:
         # receive check value here, forward to the respective hyxtalker function
 
     def handle_procout(self, name, fd, event):
-        procWrap = self.paula.getCurrentProcess()
+        procWrap = self.manager.getCurrentProcess()
         assert isinstance(procWrap, ProcessWrapper)
         print("proc %s wrote: " % name, procWrap.out_pipe.read(100))
 
     def init_hyx(self):
 
-        currentProcess = self.paula.getCurrentProcess()
+        currentProcess = self.manager.getCurrentProcess()
         assert isinstance(currentProcess, ProcessWrapper)
 
         if currentProcess.heap is None:  # TODO
@@ -85,7 +89,7 @@ class InputHandler:
 
         file_path = currentProcess.heap.file_path
         offset = currentProcess.heap.start
-        self.hyxTalker = HyxTalker(self.paula.socketname, file_path, offset)
+        self.hyxTalker = HyxTalker(self.manager.socketname, file_path, offset)
 
         self.inputPoll.register(self.hyxTalker.getSockFd(), "hyx")
 
