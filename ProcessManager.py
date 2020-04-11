@@ -65,30 +65,29 @@ class ProcessManager():
             except AttributeError:  # first time its called, the process exits from ecexve
                 proc.entering_syscall = False
 
-            regs= proc.getregs()
-            rax= getattr(regs, "rax")
-            orig_rax= getattr(regs, "orig_rax")
-
             if proc.entering_syscall:
-                if orig_rax in self.syscallsToTrace:    # or True:
+                # find out what syscall will be called, stop or skip over it
+                orig_rax= proc.getreg("orig_rax")
+                if orig_rax in self.syscallsToTrace:
                     print("process is gonna syscall: %d" % orig_rax)
                     print("stopped")
-                    # what should be done here?
 
                     proc.entering_syscall= False
-                else:
-                    proc.syscall()  # continue execution
+                    return
+                else:   # dont stop till the syscall returns
+                    proc.syscall()
                     proc.waitSyscall()
-                    rax= proc.getreg("rax") # TODO maybe extract this?
-                    print("process called syscall %d, returned result was %#x" % (orig_rax,rax))
 
-                    proc.entering_syscall= False
+                    proc.entering_syscall= True
 
-            else:   # process just exited syscall
-                rax = proc.getreg("rax")
-                print("process called syscall %d, returned result was %#x" % (orig_rax, rax))
-
+            else:   # process just exited syscall, next time we get a syscall-trap it will be at the start of another
                 proc.entering_syscall = True
+
+            regs = proc.getregs()
+            rax = getattr(regs, "rax")
+            orig_rax = getattr(regs, "orig_rax")
+
+            print("process called syscall %d, returned result was %#x" % (orig_rax, rax))
 
 
 
@@ -104,7 +103,7 @@ class ProcessManager():
 
         from ptrace.debugger.ptrace_signal import ProcessSignal, ProcessEvent
         from signal import SIGTRAP
-        self.syscallsToTrace= [0,1, 12, 21]
+        self.syscallsToTrace= [0, 1, 12, 21]
         if isinstance(event, ProcessSignal):
             if event.signum == 0x80 | SIGTRAP:  #syscall trap
                 manageSyscall(proc)
