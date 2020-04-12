@@ -2,6 +2,9 @@ from PollableQueue import PollableQueue
 from threading import Thread
 from InputReader import mainReader
 
+from ptrace.debugger.ptrace_signal import ProcessSignal, ProcessEvent
+from signal import SIGTRAP
+
 from time import sleep
 
 from ProcessWrapper import ProcessWrapper
@@ -23,7 +26,13 @@ socketname = "/tmp/paulasock"
 from PaulaPoll import PaulaPoll
 
 
-class ProcessManager():
+class ContextContinue:
+    def __init__(self):
+        self.about_to_call_interesting_syscall = False
+        self.firsttime=True
+        self.writeStdin=False
+
+class ProcessManager:
     def __init__(self, path_to_hack, socketname:str, pollobj:PaulaPoll):
         self.socketname = socketname
         self.pollobj= pollobj   # PollObj used by the input monitor, needed to register new processes
@@ -57,76 +66,118 @@ class ProcessManager():
     def getCurrentProcess(self) -> ProcessWrapper:
         return self.currentProcess
 
+
     def cont(self):
-        from ptrace.debugger.process import PtraceProcess
+        def isSysTrap(event):
+            return isinstance(event,ProcessSignal) and event.signum == 0x80 | SIGTRAP
 
-        def manageSyscall():
 
-            def manageReadSyscall():
-                assert isinstance(procWrap,ProcessWrapper)
-                if proc.getreg("rdi") != 0:         # check if process will read from stdin
-                    return "cont"
-
-                read_count = proc.getreg("rdx")
-                written= procWrap.writeBufToPipe(read_count)
-                print("read %d bytes from stdin, ( %d available written)" % (read_count,written))
+        try:
+            context=self.context
+        except AttributeError:
+            self.context = ContextContinue()
+            context=self.context
 
 
 
+        def getNextEvent():
+            """ continues execution until either an interesting syscall is about to be executed
+                or a non-syscall-trap occurs"""
 
-            try:
-                proc.entering_syscall
-            except AttributeError:  # first time its called, the process exits from ecexve
-                proc.entering_syscall = False
-
-            if proc.entering_syscall:
-                # find out what syscall will be called, stop or skip over it
-                orig_rax= proc.getreg("orig_rax")
-                if orig_rax == 0:       # read syscall
-                    manageReadSyscall()
-                elif orig_rax in self.syscallsToTrace:
-
-                    print("process is gonna syscall: %d" % orig_rax)
-                    print("stopped")
-
-                    proc.entering_syscall= False
-                    return
-                else:   # dont stop till the syscall returns
-                    #proc.syscall()
-                    proc.entering_syscall= False
-                    return "cont"
-                    proc.waitSyscall()
-                    #self.cont()     # this causes a bug with the orig_rax
-
-
-            else:   # process just exited syscall, next time we get a syscall-trap it will be at the start of another
-                proc.entering_syscall = True
-
-            regs = proc.getregs()
-            rax = getattr(regs, "rax")
-            orig_rax = getattr(regs, "orig_rax")
+            def manageStdinRead():
+                # if the user does not care about read or some data is available, just give that data to stdin
+                # returns wether to continue or not
+                requested= proc.getreg("rdx")
+                if len(procWrap.stdin_buf) > 0:
+                    written=procWrap.writeBufToPipe(requested)
+                    print("wrote %d bytes to stdin" % written)
+                    return True
+                else:
+                    context.writeStdin= requested
+                    if len(procWrap.stdin_buf) == 0:
+                        print("process wants to read %d bytes from stdin, none is available." % (requested))
+                        print("use w data to avoid lock")
+                    return False
 
 
 
+            # getNextEvent might be called for the first time when the process just entried syscall
+            if context.firsttime:
+                context.firsttime=False
+                if proc.getreg("rax") != -38:   # rax is -38 if process is about to enter a syscall
+                    # treat the first syscall as interesting, meaning we stop after it.
+                    context.about_to_call_interesting_syscall=True
+                    return getNextEvent()
 
+            if context.writeStdin:  # if stdin is hungry and we did not feed it in the previous call, do it now
+                procWrap.writeBufToPipe(context.writeStdin)
+                context.writeStdin= 0
+
+            if context.about_to_call_interesting_syscall:   # we previosly halted at syscall entry because it was interesting
+                proc.syscall()
+                event= proc.waitEvent() # wait for return of syscall
+                if isSysTrap(event):
+                    # interesting syscall completed
+                    context.about_to_call_interesting_syscall= False
+                    print("syscall %d returned %#x" % (proc.getreg("orig_rax"), proc.getreg("rax")))
+                    return None
+                else:   # event happened in the syscall
+                    raise NotImplementedError
+
+            # step to next event, if its a syscall-entry-trap check if the syscall is interesting
+            # if its an interesting syscall return, otherwise continue until
+            # an interesting syscall or another event occurs
+            else:
+                proc.syscall()
+                event=proc.waitEvent()  # this might be syscall entry
+
+                if isSysTrap(event):
+                    orig_rax = proc.getreg("orig_rax")
+                    if orig_rax == 0 and proc.getreg("rdi") == 0:   # write this when continuing
+                        can_continue= manageStdinRead()
+                        if not can_continue:
+                            context.about_to_call_interesting_syscall= True
+
+                            return None
+                        #written = procWrap.writeBufToPipe(proc.getreg("rdi"))
+                        #print("read %d bytes from stdin" % written)
+
+                    if orig_rax in self.syscallsToTrace:
+                        print("stopped, process is about to syscall %d" % orig_rax)
+                        context.about_to_call_interesting_syscall=True
+                        return None
+                    else:       # finish syscall, continue execution
+                        proc.syscall()
+                        proc.waitSyscall()    # this is syscall exit
+                        print("syscall %d returned %#x" % (proc.getreg("orig_rax"), proc.getreg("rax")))
+                        return getNextEvent()
+
+                else:       # not syscall entry
+                    return event
         procWrap= self.getCurrentProcess()
+
+
+
+
+
+
+
+
+
+
         assert isinstance(procWrap, ProcessWrapper)
         proc = procWrap.ptraceProcess
+        self.syscallsToTrace= [0, 21]
 
-        #assert proc.is_stopped  # might be wrong sometimes according to docs
+        event= getNextEvent()
+        if event is None:
+            return
 
-        # we can call continue if
-        proc.syscall()  # we want to register every syscall
-        event= proc.waitEvent()
-
-        from ptrace.debugger.ptrace_signal import ProcessSignal, ProcessEvent
-        from signal import SIGTRAP
-        self.syscallsToTrace= [0, 1, 12, 21]
         if isinstance(event, ProcessSignal):
             if event.signum == 0x80 | SIGTRAP:  #syscall trap
-                if manageSyscall() == "cont":
-                    self.cont()
-                    return              # its not pretty
+                pass
+                nextevent=cycleSyscalls()
+
             elif event.signum == SIGTRAP:    # normal trap, maybe breakpoint?
                 # check if breakpoint
                 pass
@@ -146,16 +197,3 @@ class ProcessManager():
 
 
 
-
-
-if False:
-    if read_count >= available or procWrap.justAskedForStdin:
-        procWrap.writeBufToPipe(read_count)
-        procWrap.justAskedForStdin = False
-    elif available == 0:
-        print("process wants to read from stdin, nothing to be read")
-        procWrap.justAskedForStdin = False
-    else:
-        print("process wants to read %d bytes from stdin, only %d are available" % (read_count, available))
-        print("you can write more or continue")
-        procWrap.justAskedForStdin = False
