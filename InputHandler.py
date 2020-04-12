@@ -10,9 +10,9 @@ from HyxTalker import HyxTalker
 
 class InputHandler:
 
-    def __init__(self):
+    def __init__(self, path_to_hack):
         self.inputPoll = PaulaPoll()
-        self.manager = ProcessManager("/tmp/paulasock", self.inputPoll)
+        self.manager = ProcessManager(path_to_hack,"/tmp/paulasock", self.inputPoll)
 
         self.stdinQ = PollableQueue()
         self.inputPoll.register(self.stdinQ.fileno(), "userinput")
@@ -26,7 +26,7 @@ class InputHandler:
         quit_var = False
         while not quit_var:
             pollresult = self.inputPoll.poll()
-            print(pollresult)
+            #print(pollresult)
             assert len(pollresult) > 0
 
             if len(pollresult) == 1:
@@ -63,6 +63,9 @@ class InputHandler:
         elif cmd.startswith("c"):   # continue
             self.manager.cont()
 
+        elif cmd.startswith("w"):
+            self.manager.write(cmd[2:].encode() + b"\n")    #TODO
+
 
     def handle_hyx(self, pollresult):
         raise NotImplementedError
@@ -96,5 +99,6 @@ class InputHandler:
 
 
 if __name__ == "__main__":
-    i= InputHandler()
+    path_to_hack = "/home/jasper/university/barbeit/utilstest/infgets"
+    i= InputHandler(path_to_hack)
     i.inputLoop()

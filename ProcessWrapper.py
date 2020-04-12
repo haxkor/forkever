@@ -42,6 +42,9 @@ class ProcessWrapper:
 
             self.heap= None     #Heap(self.ptraceProcess.pid)
 
+            self.justAskedForStdin=False    # when process wants to read from stdin_buf, user is asked if she wants to write more to stdin before data is read
+
+
 
 
         else:
