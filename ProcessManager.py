@@ -157,14 +157,6 @@ class ProcessManager:
         procWrap= self.getCurrentProcess()
 
 
-
-
-
-
-
-
-
-
         assert isinstance(procWrap, ProcessWrapper)
         proc = procWrap.ptraceProcess
         self.syscallsToTrace= [0,16, 21]
@@ -193,17 +185,28 @@ class ProcessManager:
 
 
 
-    def procSwitch(self):
-        ind= self.processList.index(self.getCurrentProcess())
+    def switchProcess(self, pid=None):
+        processList= self.processList
+        if len(processList) == 1:
+            print("there is just one process")
+            return
 
-        if ind==0:
-            self.currentProcess= self.processList[1]
+        if pid:
+            proc=self.getCurrentProcess()
+            while proc.ptraceProcess.pid != pid:
+                try:
+                    proc= next(iter(processList))
+                except StopIteration:
+                    print("no process with pid %d" % pid)
+                    return
+            self.currentProcess= proc
+            print("switched process")
         else:
-            self.currentProcess= self.processList[0]
 
-
-
-
+            ind= processList.index( self.getCurrentProcess())
+            nextproc= processList[ (ind +1) % len(processList)]
+            self.currentProcess=nextproc
+            print("switched to next process, pid= %d" % pid)
 
 
     def write(self,text):
