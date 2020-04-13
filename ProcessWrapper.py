@@ -130,10 +130,11 @@ class ProcessWrapper:
 
         injectcode = codeWriteEax
         inject = pwn.asm(injectcode, arch="amd64")
+        print("len inject=", len(inject))
 
         original = process.readBytes(ip, len(inject))
 
-        print("original regs=", regs, "rax=", process.getreg("rax"))
+        print("rax=", process.getreg("rax"))
         process.writeBytes(ip, inject)
 
         #process.syscall()
@@ -148,7 +149,7 @@ class ProcessWrapper:
         process.setInstrPointer(ip)
         process.setregs(regs)
 
-        print("original after regs=", regs, "rax=", process.getreg("rax"))
+        print("rax=", process.getreg("rax"))
         process.writeBytes(ip, original)
 
         child = process.debugger.list[-1]
@@ -161,6 +162,6 @@ class ProcessWrapper:
 
 
 codeWriteEax = """
-mov rax, 57     # fork
+mov rax,57
 syscall
 """
