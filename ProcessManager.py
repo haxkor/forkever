@@ -48,8 +48,8 @@ class ProcessManager:
 
     def addProcess(self, proc: ProcessWrapper):
         self.processList.append(proc)
-        self.pollobj.register(proc.getfileno("err"), "%d-err" % proc.ptraceProcess.pid)
-        self.pollobj.register(proc.getfileno("out"), "%d-out" % proc.ptraceProcess.pid)
+        self.pollobj.register(proc.out_pipe.fileno("read"), "proc-out")
+        self.pollobj.register(proc.err_pipe.fileno("read"), "proc-err")
 
     def startDebugger(self, args):
 
@@ -167,18 +167,16 @@ class ProcessManager:
 
         assert isinstance(procWrap, ProcessWrapper)
         proc = procWrap.ptraceProcess
-        self.syscallsToTrace= [0, 21]
+        self.syscallsToTrace= [0,16, 21]
 
         event= getNextEvent()
         if event is None:
             return
 
-        if isinstance(event, ProcessSignal):
-            if event.signum == 0x80 | SIGTRAP:  #syscall trap
-                pass
-                nextevent=cycleSyscalls()
+        assert not isSysTrap(event)
 
-            elif event.signum == SIGTRAP:    # normal trap, maybe breakpoint?
+        if isinstance(event, ProcessSignal):
+            if event.signum == SIGTRAP:    # normal trap, maybe breakpoint?
                 # check if breakpoint
                 pass
             else:
@@ -188,6 +186,24 @@ class ProcessManager:
 
         #print("cont got something else:", event)
         print("instruction pointer= %#x" % proc.getInstrPointer())
+
+    def fork(self):
+        procWrap= self.getCurrentProcess()
+        self.addProcess(procWrap.forkProcess())
+
+
+
+    def procSwitch(self):
+        ind= self.processList.index(self.getCurrentProcess())
+
+        if ind==0:
+            self.currentProcess= self.processList[1]
+        else:
+            self.currentProcess= self.processList[0]
+
+
+
+
 
 
     def write(self,text):

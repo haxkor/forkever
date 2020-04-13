@@ -42,18 +42,22 @@ class ProcessWrapper:
 
             self.heap= None     #Heap(self.ptraceProcess.pid)
 
-
-
-
-
+        # this is used when a process is forked by user
         else:
             assert isinstance(parent, ProcessWrapper) and isinstance(ptraceprocess, PtraceProcess)
-            self.in_pipe = parent.in_pipe.dupe()  # TODO
+            self.in_pipe = parent.in_pipe  # TODO
             self.out_pipe = parent.out_pipe
             self.err_pipe = parent.err_pipe
 
+            self.stdin_buf= parent.stdin_buf
+            self.stdout_buf= parent.stdout_buf
+            self.stderr_buf= parent.stderr_buf
+
             self.debugger = parent.debugger
             self.ptraceProcess = ptraceprocess
+
+            self.heap=Heap(self.ptraceProcess.pid)
+
 
     def setupPtraceProcess(self):
         from ptrace.debugger.debugger import PtraceDebugger
@@ -121,7 +125,7 @@ class ProcessWrapper:
 
     def forkProcess(self):
         process = self.ptraceProcess
-        ip = process.gmainetInstrPointer()
+        ip = process.getInstrPointer()
         regs = process.getregs()
 
         injectcode = codeWriteEax
@@ -129,9 +133,12 @@ class ProcessWrapper:
 
         original = process.readBytes(ip, len(inject))
 
+        print("original regs=", regs, "rax=", process.getreg("rax"))
         process.writeBytes(ip, inject)
 
-        process.cont()
+        #process.syscall()
+        process.cont()  # continue till fork happended
+
 
         event = process.waitEvent()
         print("got event_stop", event, "pid=", process.pid)
@@ -140,6 +147,8 @@ class ProcessWrapper:
 
         process.setInstrPointer(ip)
         process.setregs(regs)
+
+        print("original after regs=", regs, "rax=", process.getreg("rax"))
         process.writeBytes(ip, original)
 
         child = process.debugger.list[-1]
@@ -152,9 +161,6 @@ class ProcessWrapper:
 
 
 codeWriteEax = """
-nop
-nop
 mov rax, 57     # fork
 syscall
-nop
 """

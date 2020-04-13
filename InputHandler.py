@@ -66,6 +66,16 @@ class InputHandler:
         elif cmd.startswith("w"):
             self.manager.write(cmd[2:].encode() + b"\n")    #TODO
 
+        elif cmd.startswith("fork"):
+            self.manager.fork()
+
+        elif cmd.startswith("proclist"):
+            print(self.manager.processList)
+
+        elif cmd.startswith("procswitch"):
+            self.manager.procSwitch()
+
+
 
     def handle_hyx(self, pollresult):
         raise NotImplementedError
@@ -100,5 +110,6 @@ class InputHandler:
 
 if __name__ == "__main__":
     path_to_hack = "/home/jasper/university/barbeit/utilstest/infgets"
+    path_to_hack= "/home/jasper/university/barbeit/utilstest/cprograms/mallocinfgets"
     i= InputHandler(path_to_hack)
     i.inputLoop()
