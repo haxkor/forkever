@@ -70,6 +70,7 @@ class ProcessManager:
     def getCurrentProcess(self) -> ProcessWrapper:
         return self.currentProcess
 
+
     def getNextEvent(self, procWrap):
         def isSysTrap(event):
             return isinstance(event, ProcessSignal) and event.signum == 0x80 | SIGTRAP
@@ -85,10 +86,13 @@ class ProcessManager:
         state = proc.syscall_state
         syscall = state.event(self.syscall_options)
 
+
+        print("ip=", hex(proc.getInstrPointer()), "rax=", proc.getreg("rax"), "orig_rax=", proc.getreg("orig_rax"))
+
         # skip over boring syscalls
         if syscall.name not in self.syscallsToTrace:
             if syscall.result is not None: # print results of boring syscalls
-                print("syscall %s returned %s" % (syscall.name, syscall.result_text))
+                print("syscall %s returned %s\n" % (syscall.name, syscall.result_text))
             return self.getNextEvent(procWrap)
 
         else:       # we are tracing the specific syscall

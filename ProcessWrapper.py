@@ -138,6 +138,11 @@ class ProcessWrapper:
             self.heap = Heap(self.getPid())
 
     def forkProcess(self):
+        import utils
+        utils.changeLogHandler()
+        def printregs(s, proc):
+            print(s,"ip= %#x\trax=%#x\torig_rax=%#x" % (proc.getInstrPointer(),proc.getreg("rax"),proc.getreg("orig_rax")))
+
         from copy import copy, deepcopy
         def copySyscallstate(child: PtraceProcess, parent: PtraceProcess):
             from ptrace.debugger.syscall_state import SyscallState
@@ -152,20 +157,16 @@ class ProcessWrapper:
 
         ip = process.getInstrPointer()
         regs = process.getregs()
-        print("orig_rax = %d" % process.getreg("orig_rax"))
-        print("rax = %d" % process.getreg("rax"))
-        print(" ip = %#x" % ip)
+        printregs("starting:", process)
 
-
-        if False:
-            state = process.syscall_state
-            syscall = state.event(self.syscall_options)
-            print(syscall.format())
 
 
         at_syscall_entry = process.syscall_state.next_event == "exit"  # if process is about to syscall, dont inject
+
         if at_syscall_entry:  # user wants to fork just before a syscall
+            assert process.getreg("rax") > ( 1 << 62)
             print("user forks just before syscall")
+
             process.setreg("orig_rax", 57)
         else:
             print("normal fork")
@@ -179,17 +180,12 @@ class ProcessWrapper:
         from ptrace.debugger.process_event import NewProcessEvent
         assert isinstance(event, NewProcessEvent)
 
-        print("ip after getting newprocessevent= %#x" % process.getInstrPointer())
-        if not at_syscall_entry:
-            pass
-
+        printregs("right after newProcessEvent", process)
         process.syscall()  # exit syscall
         process.waitSyscall()
-        if at_syscall_entry:
-            process.syscall()
-            process.waitSyscall()
+        # now the variables are right
 
-        print("ip after finishing syscall= %#x" % process.getInstrPointer())
+        printregs("finishing sysc", process)
 
         #print(process.getreg("orig_rax"))
         #child_pid = process.getreg("rax")  # result of fork
@@ -208,9 +204,34 @@ class ProcessWrapper:
         child.setregs(regs)
 
 
+        from binascii import hexlify
 
         if at_syscall_entry:
             assert process.syscall_state.next_event== "exit"
+            ip= process.getInstrPointer()
+            print(pwn.disasm(process.readBytes(ip,20)))
+            process.setInstrPointer( ip - 2)
+
+            print(pwn.disasm(process.readBytes(process.getInstrPointer(),20)))
+            print("entering syscall to synch", process)
+            process.syscall()
+            process.waitSyscall()
+            process.setregs(regs)
+
+            printregs("end ",process)
+
+            if False:
+                print("in cleanup, IP = %#x" % process.getInstrPointer())
+                print("rax=", process.getreg("rax"))
+
+                process.syscall()
+                process.waitSyscall()
+
+                print("alien syscall finished too IP = %#x" % process.getInstrPointer())
+                print("rax= ", process.getreg("rax"), "call completed=", process.getreg("orig_rax"))
+
+
+
         else:
             process.writeBytes(ip, original)
             child.writeBytes(ip, original)
