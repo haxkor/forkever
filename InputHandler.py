@@ -72,8 +72,8 @@ class InputHandler:
         elif cmd.startswith("proclist"):
             print(self.manager.processList)
 
-        elif cmd.startswith("procswitch"):
-            self.manager.procSwitch()
+        elif cmd.startswith("switch"):
+            self.manager.switchProcess()
 
 
 
