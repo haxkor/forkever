@@ -78,16 +78,35 @@ class ProcessManager:
             print(s, "ip= %#x\trax=%#x\torig_rax=%#x" % (
                 proc.getInstrPointer(), proc.getreg("rax"), proc.getreg("orig_rax")))
 
+        if procWrap.stdinRequested:
+            if procWrap.writeBufToPipe(procWrap.stdinRequested) == 0:
+                print("no data to stdin was provided")
+                return
+            procWrap.stdinRequested=0
+
         proc = procWrap.ptraceProcess
         assert isinstance(proc, PtraceProcess)
         proc.syscall()
         event = proc.waitEvent()
 
-        if not isSysTrap(event):
+        if not isSysTrap(event):        # TODO check if event happened while in syscall
             return event
 
         state = proc.syscall_state
         syscall = state.event(self.syscall_options)
+
+        # if process is about to read from stdin, feed it what we have. if nothing, notify user
+        if syscall.name == "read" and state.next_event== "exit" and \
+                                      syscall.arguments[0].value == 0:
+            assert syscall.result is None   # make sure we are not returning from a syscall
+
+            count= syscall.arguments[2].value   # how much is read
+            if len(procWrap.stdin_buf) == 0:
+                print("process requests %d bytes from stdin" % (count))
+                procWrap.stdinRequested=count
+                return
+            written= procWrap.writeBufToPipe(count)
+            print("process requests %d bytes from stdin (%d written)" % (count, written))
 
         # skip over boring syscalls
         if syscall.name not in self.syscallsToTrace:
@@ -96,13 +115,13 @@ class ProcessManager:
 
             return self.getNextEvent(procWrap)
 
-        else:  # we are tracing the specific syscall
-            if syscall.result is not None:
+        # we are tracing the specific syscall
+        else:
+            if syscall.result is not None:  # just returned
                 print("%s = %s" % (syscall.name, syscall.result_text))
-            else:
+            else:   # about to call
                 print("process is about to syscall %s" % syscall.format())
 
-        return
 
     def cont(self):
 

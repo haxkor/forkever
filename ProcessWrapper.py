@@ -21,6 +21,7 @@ class ProcessWrapper:
             write_argname=True,
             write_address=True,
         )
+        self.stdinRequested= False
 
         if args:
             assert debugger is not None
