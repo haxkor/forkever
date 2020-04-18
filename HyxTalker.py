@@ -2,6 +2,8 @@ from socket import socket, AF_UNIX, SOCK_STREAM
 from subprocess import Popen
 from struct import pack, unpack
 
+from HeapClass import Heap
+
 UPD_FROMBLOB = b"\x40"
 UPD_FROMBLOBNEXT = b"\x41"
 UPD_FROMPAULA = b"\x01"
@@ -13,7 +15,7 @@ import os
 
 
 class HyxTalker():
-    def __init__(self, socketname, filepath, offset):
+    def __init__(self, socketname:str, heapobj:Heap):
         self.rootsock = socket(AF_UNIX, SOCK_STREAM)
 
         try:
@@ -21,8 +23,9 @@ class HyxTalker():
         except FileNotFoundError:
             pass
         self.rootsock.bind(socketname)
+        self.heap= heapobj
 
-        self.hyxprocess=self.launchHyx(filepath, offset, socketname)
+        self.hyxprocess=self.launchHyx(heapobj.newHeapfile(), heapobj.start, socketname)
 
         self.rootsock.listen(3)
         self.hyxsock, _ = self.rootsock.accept()
@@ -41,6 +44,7 @@ class HyxTalker():
         return self.hyxsock.fileno()
 
     def sendUpdates(self, tuplelist):
+        print("sendUpdates Tuplelist=",tuplelist)
         def makeChangeStruct(start, data):
             ret = pack("<I", start)
             ret += pack("<I", len(data))
@@ -69,11 +73,19 @@ class HyxTalker():
             self.nextpos += length
 
         data = sock.recv(length)
-        return (pos, data)
+        return pos, data
 
-    def writeUpdate(self, *data_list):
-        with open(self.path_mem, "bw+") as mem:
-            for datapack in data_list:
-                (pos, data) = datapack
-                mem.seek(self.heap_start + pos)
-                mem.write(data)
+    def updateHyx(self):
+        change= self.heap.checkChange()
+
+        if change == "same":
+            print("no change detected")
+            return
+        elif change == "length":
+            raise NotImplementedError
+        elif isinstance(change,list):
+            self.sendUpdates(change)
+        else:
+            raise NotImplementedError
+
+

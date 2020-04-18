@@ -43,6 +43,9 @@ class InputHandler:
                 print(pollresult)
                 raise NotImplementedError
 
+            if self.hyxTalker:
+                self.hyxTalker.updateHyx()
+
     # this is called when a new line has been put to the stdinQ
     def handle_stdin(self, fd, event):
         cmd = self.stdinQ.get()[:-1]  # remove newline
@@ -129,7 +132,7 @@ class InputHandler:
 
         file_path = currentProcess.heap.file_path
         offset = currentProcess.heap.start
-        self.hyxTalker = HyxTalker(self.manager.socketname, file_path, offset)
+        self.hyxTalker = HyxTalker(self.manager.socketname, currentProcess.heap)
 
         self.inputPoll.register(self.hyxTalker.getSockFd(), "hyx")
 
@@ -141,6 +144,6 @@ if __name__ == "__main__":
     path_to_hack = "/home/jasper/university/barbeit/utilstest/infgets"
     path_to_hack= "/home/jasper/university/barbeit/utilstest/cprograms/mallocinfgets"
     #path_to_hack= "/home/jasper/university/barbeit/syscalltrap/t2"
-    path_to_hack = "/home/jasper/university/barbeit/dummy/minimalloc"
+    path_to_hack = "/home/jasper/university/barbeit/dummy/minimalloc2"
     i= InputHandler(path_to_hack)
     i.inputLoop()
