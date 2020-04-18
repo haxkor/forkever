@@ -41,7 +41,7 @@ class Heap:
         # check if something changed
         newstart,newend = self.getStartStop()
         if newstart == self.start and newend== self.end:
-            if 
+            if
 
 
     def newHeapcopy(self):
