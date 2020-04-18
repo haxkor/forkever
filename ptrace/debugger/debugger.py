@@ -82,22 +82,26 @@ class PtraceDebugger(object):
         info("Attach %s to debugger" % process)
         self.dict[pid] = process
         self.list.append(process)
-        if not seize:
-            try:
+
+        try:
+            if not seize:   #seizing a process does not stop it
                 process.waitSignals(SIGTRAP, SIGSTOP)
-            except KeyboardInterrupt:
-                error(
-                    "User interrupt! Force the process %s attach "
-                    "(don't wait for signals)."
-                    % pid)
-            except ProcessSignal as event:
-                event.display()
-            except:   # noqa: E722
-                process.is_attached = False
-                process.detach()
-                raise
-            if HAS_PTRACE_EVENTS and self.options:
-                process.setoptions(self.options)
+        except KeyboardInterrupt:
+            error(
+                "User interrupt! Force the process %s attach "
+                "(don't wait for signals)."
+                % pid)
+        except ProcessSignal as event:
+            event.display()
+        except:   # noqa: E722
+            process.is_attached = False
+            process.detach()
+            raise
+        # options cant be set when process is still running
+        if HAS_PTRACE_EVENTS and self.options and not seize:
+            print("setting options")
+            process.setoptions(self.options)
+
         return process
 
     def quit(self):

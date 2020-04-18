@@ -5,6 +5,7 @@ from ptrace.binding import (
     ptrace_cont, ptrace_syscall,
     ptrace_setregs,
     ptrace_peektext, ptrace_poketext,
+    ptrace_interrupt, ptrace_seize,  #add by jasper
     REGISTER_NAMES)
 from ptrace.os_tools import HAS_PROC, RUNNING_BSD, RUNNING_PYTHON3
 from ptrace.tools import dumpRegs
@@ -29,6 +30,7 @@ from ptrace.debugger.memory_mapping import readProcessMappings
 from ptrace.binding.cpu import CPU_INSTR_POINTER, CPU_STACK_POINTER, CPU_FRAME_POINTER, CPU_SUB_REGISTERS
 from ptrace.debugger.syscall_state import SyscallState
 from six import b
+from ptrace.binding.func import ptrace
 
 if HAS_PTRACE_SINGLESTEP:
     from ptrace.binding import ptrace_singlestep
@@ -157,7 +159,7 @@ class PtraceProcess(object):
     make sure that the process is stopped.
     """
 
-    def __init__(self, debugger, pid, is_attached, parent=None, is_thread=False):
+    def __init__(self, debugger, pid, is_attached, parent=None, is_thread=False, seize=False):
         self.debugger = debugger
         self.breakpoints = {}
         self.pid = pid
@@ -168,8 +170,9 @@ class PtraceProcess(object):
         self.is_attached = False
         self.is_stopped = True
         self.is_thread = is_thread
+        self.is_seized = False
         if not is_attached:
-            self.attach()
+            self.attach(seize)
         else:
             self.is_attached = True
         if HAS_PROC:
@@ -182,11 +185,17 @@ class PtraceProcess(object):
         stat = readProcessStat(self.pid)
         return (stat.state == 'T')
 
-    def attach(self):
+    def attach(self,seize=False):
         if self.is_attached:
             return
         info("Attach process %s" % self.pid)
-        ptrace_attach(self.pid)
+        if not seize:           #add by jasper
+            ptrace_attach(self.pid)
+        else:
+            self.is_seized=True
+            ptrace_seize(self.pid)
+            print("done seizing")
+
         self.is_attached = True
 
     def dumpCode(self, start=None, stop=None, manage_bp=False, log=None):
@@ -426,7 +435,6 @@ class PtraceProcess(object):
             return bytes2type(bytes, ptrace_registers_t)
 
     def getreg(self, name):
-        print("in getreg, registernames=",REGISTER_NAMES)
         try:
             name, shift, mask = CPU_SUB_REGISTERS[name]
         except KeyError:
@@ -773,5 +781,14 @@ class PtraceProcess(object):
     def __hash__(self):
         return hash(self.pid)
 
+    def interrupt(self):
+        assert self.is_seized==True
+        ptrace_interrupt(self.pid)
+        self.is_stopped=True
+
     def notImplementedError(self):
         raise NotImplementedError()
+
+
+    def ptrace(self,command, pid=0, arg1=0, arg2=0, check_errno=False):
+        return ptrace(command,pid, arg1, arg2, check_errno)

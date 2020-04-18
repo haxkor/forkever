@@ -118,6 +118,9 @@ PTRACE_EVENT_EXEC = 4
 PTRACE_EVENT_VFORK_DONE = 5
 PTRACE_EVENT_EXIT = 6
 
+### cheap adds by jasper
+PTRACE_SEIZE= 0x4206
+
 try:
     from cptrace import ptrace as _ptrace
     HAS_CPTRACE = True
@@ -162,8 +165,19 @@ def ptrace_traceme():
 
 
 def ptrace_attach(pid):
-    print("in pattach, type of pid=",type(pid))
     ptrace(PTRACE_ATTACH, pid)
+
+
+def ptrace_seize(pid):      #add by jasper
+    ptrace(PTRACE_SEIZE, pid)
+
+
+def ptrace_interrupt(pid):  #add by jasper
+    import time
+    time.sleep(1)
+    PTRACE_INTERRUPT= 0x4207
+    ptrace(PTRACE_INTERRUPT,pid)
+    print("interrupt done")
 
 
 def ptrace_detach(pid, signal=0):
@@ -294,4 +308,3 @@ else:
 if HAS_PTRACE_IO:
     def ptrace_io(pid, io_desc):
         ptrace(PTRACE_IO, pid, addressof(io_desc))
-
