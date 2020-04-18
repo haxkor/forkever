@@ -121,6 +121,11 @@ class InputHandler:
             except KeyError:
                 print("there is no heap yet, not starting hyx.")
                 return
+        else:
+            print("there already is a heap")
+
+        heap= currentProcess.getHeap()
+        print(heap.start, heap.file_path)
 
         file_path = currentProcess.heap.file_path
         offset = currentProcess.heap.start
@@ -135,7 +140,7 @@ if __name__ == "__main__":
 
     path_to_hack = "/home/jasper/university/barbeit/utilstest/infgets"
     path_to_hack= "/home/jasper/university/barbeit/utilstest/cprograms/mallocinfgets"
-    path_to_hack= "/home/jasper/university/barbeit/syscalltrap/t2"
+    #path_to_hack= "/home/jasper/university/barbeit/syscalltrap/t2"
     path_to_hack = "/home/jasper/university/barbeit/dummy/minimalloc"
     i= InputHandler(path_to_hack)
     i.inputLoop()

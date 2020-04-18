@@ -7,7 +7,8 @@ UPD_FROMBLOBNEXT = b"\x41"
 UPD_FROMPAULA = b"\x01"
 SZ_SIZET = 8
 
-hyx_path = "/home/jasper/github/hyxWIPclion/hyx-0.1.5/myhyx"
+hyx_path= "/home/jasper/CLionProjects/hyxWIP/hyx-0.1.5/myhyx"
+
 import os
 
 

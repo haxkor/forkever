@@ -69,10 +69,7 @@ class ProcessWrapper:
             self.ptraceProcess = ptraceprocess
             self.copyBreakpoints()
 
-            try:
-                self.heap = Heap(self.ptraceProcess.pid)
-            except KeyError:
-                self.heap = None
+            self.heap=None
 
     def copyBreakpoints(self):
         from ptrace.debugger.process import Breakpoint
@@ -80,6 +77,15 @@ class ProcessWrapper:
             assert isinstance(bp,Breakpoint)
             new_bp= self.ptraceProcess.createBreakpoint(bp.address)
             new_bp.old_bytes= bp.old_bytes
+
+
+    def getHeap(self):
+        if self.heap is None:
+            self.heap= Heap(self.ptraceProcess.pid)
+            return self.heap
+        else:
+            print(self.heap)
+            return self.heap
 
 
 
@@ -152,7 +158,7 @@ class ProcessWrapper:
 
     def setHeap(self):
         if self.heap is None:
-            self.heap = Heap(self.getPid())
+            self.heap = Heap(self)
 
     def forkProcess(self):
         """ forks the process. If the process just syscalled (and is trapped in the syscall entry),
