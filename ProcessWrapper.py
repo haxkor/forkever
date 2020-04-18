@@ -22,6 +22,9 @@ class ProcessWrapper:
             write_address=True,
         )
         self.stdinRequested= False
+        self.remember_insert_bp=False
+        self.atBreakpoint=False
+        self.inserted_function_data=False
 
         if args:
             assert debugger is not None
@@ -53,6 +56,7 @@ class ProcessWrapper:
         # this is used when a process is forked by user
         else:
             assert isinstance(parent, ProcessWrapper) and isinstance(ptraceprocess, PtraceProcess)
+            self.parent= parent
             self.in_pipe = parent.in_pipe  # TODO
             self.out_pipe = parent.out_pipe
             self.err_pipe = parent.err_pipe
@@ -63,11 +67,23 @@ class ProcessWrapper:
 
             self.debugger = parent.debugger
             self.ptraceProcess = ptraceprocess
+            self.copyBreakpoints()
 
             try:
                 self.heap = Heap(self.ptraceProcess.pid)
             except KeyError:
                 self.heap = None
+
+    def copyBreakpoints(self):
+        from ptrace.debugger.process import Breakpoint
+        for bp in self.parent.ptraceProcess.breakpoints.values():
+            assert isinstance(bp,Breakpoint)
+            new_bp= self.ptraceProcess.createBreakpoint(bp.address)
+            new_bp.old_bytes= bp.old_bytes
+
+
+
+
 
     def setupPtraceProcess(self):
         from ptrace.debugger.debugger import PtraceDebugger

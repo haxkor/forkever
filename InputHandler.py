@@ -48,17 +48,13 @@ class InputHandler:
         cmd = self.stdinQ.get()[:-1]  # remove newline
         print(cmd)
         assert isinstance(cmd, str)
+        import signal
+        if event == signal.SIGWINCH:
+            return
 
         if cmd == "hyx" and not self.hyxTalker:
             self.init_hyx()
 
-        elif cmd.startswith("b"):
-            proc = self.manager.getCurrentProcess().ptraceProcess
-            print("%x" % proc.getInstrPointer())
-
-            bp_ad = int(cmd[1:], 16)
-            proc.createBreakpoint(bp_ad)
-            print("breakpoint set at %x" % bp_ad)
 
         elif cmd.startswith("c"):   # continue
             self.manager.cont()
@@ -75,6 +71,32 @@ class InputHandler:
         elif cmd.startswith("switch"):
             self.manager.switchProcess()
 
+        elif cmd.startswith("b"):
+            if cmd.startswith("b1"):
+                self.manager.insertBreakpoint(0x401153)
+            elif cmd.startswith("b2"):
+                self.manager.insertBreakpoint(0x401148)
+            elif cmd.startswith("b3"):
+                self.manager.insertBreakpoint(0x401158)
+            else:
+                self.manager.insertBreakpoint(int(cmd[2:], 16))
+
+        elif cmd.startswith("malloc"):
+            self.manager.malloc(10)
+
+
+
+
+        elif cmd.startswith("list b"):
+            print(self.manager.getCurrentProcess().ptraceProcess.breakpoints)
+
+        elif cmd.startswith("s"):
+            self.manager.singlestep()
+
+        elif cmd.startswith("res"):
+
+            print(self.manager.getCurrentProcess().ptraceProcess.breakpoints)
+            self.manager.resumeFromBreakpoint()
 
 
     def handle_hyx(self, pollresult):
@@ -85,7 +107,7 @@ class InputHandler:
     def handle_procout(self, name, fd, event):
         procWrap = self.manager.getCurrentProcess()
         assert isinstance(procWrap, ProcessWrapper)
-        print("proc %s wrote: " % name, procWrap.out_pipe.read(100))
+        print("proc %s wrote: " % name, procWrap.out_pipe.read(4096))
 
     def init_hyx(self):
 
@@ -107,9 +129,13 @@ class InputHandler:
         self.inputPoll.register(self.hyxTalker.getSockFd(), "hyx")
 
 
-
 if __name__ == "__main__":
+    import utils
+    utils.changeLogHandler()
+
     path_to_hack = "/home/jasper/university/barbeit/utilstest/infgets"
     path_to_hack= "/home/jasper/university/barbeit/utilstest/cprograms/mallocinfgets"
+    path_to_hack= "/home/jasper/university/barbeit/syscalltrap/t2"
+    path_to_hack = "/home/jasper/university/barbeit/dummy/minimalloc"
     i= InputHandler(path_to_hack)
     i.inputLoop()
