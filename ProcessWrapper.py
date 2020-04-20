@@ -193,15 +193,13 @@ class ProcessWrapper:
         child = process.debugger.list[-1]
         assert child.getreg("rax") == 0  # successfull fork
 
-        #process.syscall()
-        #process.waitSyscall()
-
         process.setregs(regs)
         child.setregs(regs)
 
         if at_syscall_entry:
-            # we just executed the syscall for fork,
-            # so walk over it again to enter original syscall
+            # we just returned from our "inserted" fork syscall
+            # now we need to restore the original state, meaning our
+            # parent has to enter a syscall again. After that, restore registers
             ip= process.getInstrPointer()
             process.setInstrPointer( ip - 2)
 
@@ -212,9 +210,6 @@ class ProcessWrapper:
             orig_rax = process.getreg("orig_rax")   # child will enter syscall when user continues
             child.setreg("rax", orig_rax)
             child.setInstrPointer(ip - 2)
-
-            printregs("end ",process)
-
         else:
             process.writeBytes(ip, original)
             child.writeBytes(ip, original)
@@ -228,10 +223,6 @@ class ProcessWrapper:
 
         def isSysTrap(event):
             return isinstance(event, ProcessSignal) and event.signum == 0x80 | SIGTRAP
-
-        def printregs(s="", proc=self.ptraceProcess):
-            print(s, "ip= %#x\trax=%#x\torig_rax=%#x" % (
-                proc.getInstrPointer(), proc.getreg("rax"), proc.getreg("orig_rax")))
 
         def feedStdin(syscall):
             """called if process wants to read from stdin"""
@@ -253,7 +244,6 @@ class ProcessWrapper:
         proc = self.ptraceProcess
         assert isinstance(proc, PtraceProcess)  # useless comment:
 
-        proc.setoptions(23)
         if not singlestep:
             proc.syscall()
         else:
@@ -262,7 +252,6 @@ class ProcessWrapper:
         event = proc.waitEvent()
 
         if not isSysTrap(event):  # TODO check if event happened while in syscall
-            print(event.signum)
             return event
 
         state = proc.syscall_state
