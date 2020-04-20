@@ -6,6 +6,8 @@ from ptrace.debugger.process_event import ProcessExecution
 import pwn
 from subprocess import Popen
 from utils import path_launcher
+from ptrace.debugger.ptrace_signal import ProcessSignal
+from signal import SIGTRAP
 
 from HeapClass import Heap
 
@@ -84,11 +86,7 @@ class ProcessWrapper:
             self.heap= Heap(self.ptraceProcess.pid)
             return self.heap
         else:
-            print(self.heap)
             return self.heap
-
-
-
 
 
     def setupPtraceProcess(self):
@@ -116,7 +114,7 @@ class ProcessWrapper:
 
     def addBreakpoints(self, *bp_list):
         def addSingleBP(breakpoint):
-            self.ptraceProcess.crepaulaateBreakpoint(breakpoint)
+            self.ptraceProcess.createBreakpoint(breakpoint)
 
         for bp in bp_list:
             addSingleBP(bp)
@@ -224,8 +222,204 @@ class ProcessWrapper:
         return ProcessWrapper(parent=self, ptraceprocess=child)
 
 
-codeWriteEax = """
-syscall
-"""
+    def getNextEvent(self, singlestep=False):
+        """ continues execution until an interesing syscall is entered/exited or
+            some other event (hopyfully breakpoint sigtrap) happens"""
 
-inject = pwn.asm(codeWriteEax, arch="amd64")
+        def isSysTrap(event):
+            return isinstance(event, ProcessSignal) and event.signum == 0x80 | SIGTRAP
+
+        def printregs(s="", proc=self.ptraceProcess):
+            print(s, "ip= %#x\trax=%#x\torig_rax=%#x" % (
+                proc.getInstrPointer(), proc.getreg("rax"), proc.getreg("orig_rax")))
+
+        def feedStdin(syscall):
+            """called if process wants to read from stdin"""
+            assert syscall.result is None  # make sure we are not returning from a syscall
+            count = syscall.arguments[2].value  # how much is read
+            if len(self.stdin_buf) == 0:
+                print("process requests %d bytes from stdin" % (count))
+                self.stdinRequested = count
+                return 0
+            else:
+                return count, self.writeBufToPipe(count)
+
+        if self.stdinRequested:
+            if self.writeBufToPipe(self.stdinRequested) == 0:
+                print("no data to stdin was provided")
+                return
+            self.stdinRequested = 0
+
+        proc = self.ptraceProcess
+        assert isinstance(proc, PtraceProcess)  # useless comment:
+
+        proc.setoptions(23)
+        if not singlestep:
+            proc.syscall()
+        else:
+            proc.singleStep()
+
+        event = proc.waitEvent()
+
+        if not isSysTrap(event):  # TODO check if event happened while in syscall
+            print(event.signum)
+            return event
+
+        state = proc.syscall_state
+        syscall = state.event(self.syscall_options)
+
+        # if process is about to read from stdin, feed it what we have. if nothing is available, notify user
+        if syscall.name == "read" and state.next_event == "exit" and \
+                syscall.arguments[0].value == 0:
+            written = feedStdin(syscall)
+            if written == 0:
+                return
+            else:
+                print("process requests %d bytes from stdin (%d written)" % written)
+
+        # skip over boring syscalls
+        if syscall.name not in self.syscallsToTrace:
+            if syscall.result is not None:  # print results of boring syscalls
+                # print("syscall %s = %s" % (syscall.format(), syscall.result_text))
+                pass
+
+            return self.getNextEvent()
+
+        # we are tracing the specific syscall
+        else:
+            if syscall.result is not None:  # just returned
+                print("%s = %s" % (syscall.name, syscall.result_text))
+            else:  # about to call
+                print("process is about to syscall %s" % syscall.format())
+
+    def insertBreakpoint(self, adress):
+        return self.ptraceProcess.createBreakpoint(adress)
+
+
+    def reinstertBreakpoint(self):
+        """makes sure that breakpoints are reinserted"""
+        from ptrace.debugger.process import Breakpoint
+        proc = self.ptraceProcess
+
+        ip = proc.getInstrPointer() - 1
+        bp = proc.findBreakpoint(ip)
+        bp.desinstall(set_ip=True)
+
+        # if the breakpoint was set at a syscall, it will be reinserted after the syscall was executed
+        if proc.readBytes(ip, 2) == b'\x0f\x05':        # syscall instruction
+            self.remember_insert_bp = True
+        else:
+            proc.singleStep()
+            proc.waitSignals(SIGTRAP)
+            proc.createBreakpoint(ip)
+
+    def _reinstertBreakpointAfterSyscall(self):
+        """if a breakpoint was set on a syscall, it is readded after the syscall is done
+            (called by getNextEvent)"""
+        proc = self.ptraceProcess
+        ip = proc.getInstrPointer() - 2  # syscall instruction is 2 long
+        proc.createBreakpoint(ip)
+        self.remember_readd_breakpoint = False
+
+    def removeBreakpoint(self, address):
+        proc = self.ptraceProcess
+        bp = proc.findBreakpoint(address)
+        if not bp:
+            print("no breakpoint at %#x" % address)
+        else:
+            proc.removeBreakpoint(bp)
+            print("breakpoint removed")
+
+    def callFunction(self, funcname, *args):
+        """ immediately calls a desired function by overwriting code that is about to be executed.
+            State will be restored as soon as function returns.
+            Can not be called if the process is at a syscall entry"""
+        func_ad = self.programinfo.getAddrOf(funcname)
+        proc = self.ptraceProcess
+        if proc.syscall_state.next_event == "exit":
+            print("about to call syscall, returning")
+            return
+        if self.inserted_function_data:
+            print("already in an inserted function, returning")
+            return
+
+        inject = """
+            mov eax, %d
+            call eax
+            int3""" % func_ad
+        inject = pwn.asm(inject)
+
+        oldregs = proc.getregs()
+
+        argregs = ["rdi", "rsi", "rdx", "r10"]  # set new args (depends on calling convention)
+        if len(args) > len(argregs):
+            raise ValueError("too many arguments supplied")
+        for (val, reg) in zip(args, argregs):
+            proc.setreg(reg, val)
+
+        ip = proc.getInstrPointer()
+        oldbytes = proc.readBytes(ip, len(inject))
+        proc.writeBytes(ip, inject)
+        finish = ip + len(inject)  # if ip==finish, call afterCallFunction
+
+        self.inserted_function_data = (ip, finish, oldbytes, oldregs, funcname)
+        self.cont()
+
+    def _afterCallFunction(self):
+        proc = self.ptraceProcess
+        originalip, finish, oldbytes, oldregs, funcname = self.inserted_function_data
+
+        proc.writeBytes(originalip, oldbytes)
+        result = proc.getreg("rax")
+        print("%s returned %#x" % (funcname, result))
+        proc.setregs(oldregs)
+        self.inserted_function_data = None
+
+    def malloc(self, n):
+        self.callFunction("plt.malloc", n)
+
+    def free(self,pointer,force=False):
+        self.callFunction("plt.free", pointer)
+        return "free was called"
+
+    def singlestep(self):
+        return self.cont(singlestep=True)
+
+    def cont(self, singlestep=False):
+        proc = self.ptraceProcess
+
+        if self.inserted_function_data:
+            print(self.inserted_function_data)
+
+        self.syscallsToTrace = ["read", "write", "fork"]
+
+        event = self.getNextEvent(singlestep=singlestep)
+        if event is None:  # happens if an interesting syscall is hit
+            return
+
+        if self.inserted_function_data:
+            print("finiship= %#x" % self.inserted_function_data[1])
+            print("calling aftercall")
+            self._afterCallFunction()
+
+        print("cont event=", event)
+
+        if isinstance(event, ProcessSignal):
+            if event.signum == SIGTRAP:  # normal trap, maybe breakpoint?
+                ip = proc.getInstrPointer()
+                if ip - 1 in proc.breakpoints.keys():   # did we hit a breakpoint?
+                    print("hit breakpoint at %#x" % (ip - 1))
+                    self.atBreakpoint = True
+
+                if self.atBreakpoint:  # did we just return from an inserted function?
+                    self.reinstertBreakpoint()
+                    self.atBreakpoint = False
+
+            else:
+                print(event)
+
+        print("instruction pointer= %#x" % proc.getInstrPointer())
+
+
+
+inject = pwn.asm("syscall", arch="amd64")

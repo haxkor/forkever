@@ -141,9 +141,11 @@ if __name__ == "__main__":
     import utils
     utils.changeLogHandler()
 
-    path_to_hack = "/home/jasper/university/barbeit/utilstest/infgets"
     path_to_hack= "/home/jasper/university/barbeit/utilstest/cprograms/mallocinfgets"
     #path_to_hack= "/home/jasper/university/barbeit/syscalltrap/t2"
     path_to_hack = "/home/jasper/university/barbeit/dummy/minimalloc2"
+    path_to_hack = "/home/jasper/university/barbeit/utilstest/infgets"
+
+
     i= InputHandler(path_to_hack)
     i.inputLoop()
