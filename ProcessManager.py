@@ -1,23 +1,10 @@
-from PollableQueue import PollableQueue
-from threading import Thread
-from InputReader import mainReader
-
-from ptrace.debugger.ptrace_signal import ProcessSignal, ProcessEvent
-from signal import SIGTRAP
-
-from time import sleep
-
 from ProcessWrapper import ProcessWrapper
-from select import poll, POLLIN, POLLERR, POLLPRI
 
-from subprocess import Popen
-
-from ptrace.debugger import PtraceDebugger, PtraceProcess
+from ptrace.debugger import PtraceDebugger
 
 from ptrace.func_call import FunctionCallOptions
 
 import pwn
-from ptrace.debugger.process_event import ProcessExecution
 
 hyx_path = "/"
 
@@ -25,7 +12,7 @@ path_launcher = "launcher/dummylauncher"
 path_tohack = "launcher/babymalloc"
 socketname = "/tmp/paulasock"
 
-from PaulaPoll import PaulaPoll
+from utils.PaulaPoll import PaulaPoll
 
 
 class ProgramInfo:

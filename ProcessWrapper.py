@@ -1,11 +1,10 @@
-import time
-from PaulaPipe import Pipe
+from utils.PaulaPipe import Pipe
 
 from ptrace.debugger.process import PtraceProcess
 from ptrace.debugger.process_event import ProcessExecution
 import pwn
 from subprocess import Popen
-from utils import path_launcher
+from utils.utils import path_launcher
 from ptrace.debugger.ptrace_signal import ProcessSignal
 from signal import SIGTRAP
 
@@ -290,7 +289,6 @@ class ProcessWrapper:
 
     def reinstertBreakpoint(self):
         """makes sure that breakpoints are reinserted"""
-        from ptrace.debugger.process import Breakpoint
         proc = self.ptraceProcess
 
         ip = proc.getInstrPointer() - 1
