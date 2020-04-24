@@ -6,6 +6,6 @@ def mainReader(stdinQ:PollableQueue):
 
     for line in iter(stdin.readline, b""):
         #determine result(line)
-        stdinQ.put(line)
+        stdinQ.put(line.decode())
 
 

@@ -12,7 +12,7 @@ path_launcher = "launcher/dummylauncher"
 path_tohack = "launcher/babymalloc"
 socketname = "/tmp/paulasock"
 
-from utils.PaulaPoll import PaulaPoll
+from PaulaPoll import PaulaPoll
 
 
 class ProgramInfo:

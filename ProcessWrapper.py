@@ -1,10 +1,10 @@
-from utils.PaulaPipe import Pipe
+from PaulaPipe import Pipe
 
 from ptrace.debugger.process import PtraceProcess
 from ptrace.debugger.process_event import ProcessExecution
 import pwn
 from subprocess import Popen
-from utils.utils import path_launcher
+from utils import path_launcher
 from ptrace.debugger.ptrace_signal import ProcessSignal
 from signal import SIGTRAP
 

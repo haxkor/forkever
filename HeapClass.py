@@ -1,4 +1,4 @@
-from utils.utils import tmppath
+from utils import tmppath
 from re import findall
 
 import hashlib

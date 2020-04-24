@@ -1,6 +1,6 @@
-from utils.PaulaPoll import PaulaPoll
+from PaulaPoll import PaulaPoll
 from ProcessManager import ProcessManager
-from utils.PollableQueue import PollableQueue
+from PollableQueue import PollableQueue
 
 from threading import Thread
 from InputReader import mainReader
@@ -136,7 +136,6 @@ class InputHandler:
         self.hyxTalker.destroy()
         self.hyxTalker=None
         self.inputPoll.unregister("hyx")
-        #bob
 
 
 
@@ -165,7 +164,7 @@ class InputHandler:
 
 
 if __name__ == "__main__":
-    from utils import utils
+    import utils
 
     utils.changeLogHandler()
 
