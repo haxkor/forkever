@@ -2,6 +2,7 @@ from utils import tmppath
 from re import findall
 
 import hashlib
+from weakref import ref
 
 
 def hashfunc(obj):
@@ -17,6 +18,7 @@ class Heap:
         self.start, self.stop = self.getStartStop()
 
         self.file_path = tmppath + "heapcopy%d" % procWrap.ptraceProcess.pid
+        self.mem_path = "/proc/%d/mem" % self.pid
 
         self.heapbytes = bytearray(self.stop - self.start)
         self.hash = 0
@@ -38,12 +40,11 @@ class Heap:
             start, end = start_end_tuple[0]
         return start, end
 
-    def findChanges(self):
-        pass
 
     def checkChange(self):
         """checks if the heap changed. if some bytes changed, return the tuplelist indicating the changes.
             if the size of the heap changed, return that (does not change the bytearray)"""     # TODO make this an iterator
+
         def findChanges():
             from itertools import count
             start = 0
@@ -76,14 +77,14 @@ class Heap:
                 buf = bytearray(self.stop - self.start)
                 assert self.stop - self.start == mem.readinto(buf)
             newhash = hashlib.sha3_224(buf).digest()
-            print("hash= %s" % newhash)
+            #print("hash= %s" % newhash)
             if newhash != self.hash:
                 self.hash = newhash
                 tuplelist = findChanges()
                 self.heapbytes = buf
                 return tuplelist
             else:
-                return "same"  # so every case returns a tuple
+                return "same"
 
         else:
             self.start = newstart
@@ -101,3 +102,16 @@ class Heap:
             mem.seek(start)
             heapcopy.write(mem.read(end - start))
         return self.file_path
+
+    def writeUpdates(self,pos:int,data:bytes):
+        pos+=self.start
+        assert self.start <= pos <= self.stop and pos + len(data) <= self.stop
+        self.processWrapper.ptraceProcess.writeBytes(pos,data)
+
+        pos-= self.start
+        self.heapbytes[pos:pos+len(data)] = data
+        self.hash= hashlib.sha3_224(self.heapbytes).digest()
+
+
+
+

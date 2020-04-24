@@ -1,8 +1,8 @@
 import pty
 import os
 import subprocess
+
 PIPE_BUFSIZE = 4096
-_control = False
 
 
 class Pipe:
@@ -13,26 +13,24 @@ class Pipe:
 
         if flags or not terminal:
             self._readfd, self._writefd = os.pipe2(flags)
-        else:   # default
+        else:  # default
             self._readfd, self._writefd = pty.openpty()
 
-        os.set_inheritable(self._readfd,True)
-        os.set_inheritable(self._writefd,True)
+        os.set_inheritable(self._readfd, True)
+        os.set_inheritable(self._writefd, True)
 
         self.readobj = open(self._readfd, "rb", 0)
         self.writeobj = open(self._writefd, "wb", 0)
 
-    def fileno(self,which):
-        if which=="read":
+    def fileno(self, which):
+        if which == "read":
             return self._readfd
-        elif which=="write":
+        elif which == "write":
             return self._writefd
         else:
             raise KeyError
 
         # als nächstes das in processwrapper umsetzen, thread der auf IO vom programm listend und stderr,out bündelt?
-
-
 
     def write(self, text):
         if isinstance(text, str):

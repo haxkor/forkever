@@ -8,11 +8,12 @@ from InputReader import mainReader
 from ProcessWrapper import ProcessWrapper
 from HyxTalker import HyxTalker
 
+
 class InputHandler:
 
     def __init__(self, path_to_hack):
         self.inputPoll = PaulaPoll()
-        self.manager = ProcessManager(path_to_hack,"/tmp/paulasock", self.inputPoll)
+        self.manager = ProcessManager(path_to_hack, "/tmp/paulasock", self.inputPoll)
 
         self.stdinQ = PollableQueue()
         self.inputPoll.register(self.stdinQ.fileno(), "userinput")
@@ -26,13 +27,13 @@ class InputHandler:
         quit_var = False
         while not quit_var:
             pollresult = self.inputPoll.poll()
-            #print(pollresult)
+            # print(Numerik partieller Diffepollresult)
             assert len(pollresult) > 0
 
             if len(pollresult) == 1:
                 name, pollfd, event = pollresult[0]
                 if name == "hyx":
-                    pass
+                    self.handle_hyx(event)
                 elif name == "userinput":
                     self.handle_stdin(pollfd, event)
                 elif "-out" in name:
@@ -59,11 +60,11 @@ class InputHandler:
             self.init_hyx()
 
 
-        elif cmd.startswith("c"):   # continue
+        elif cmd.startswith("c"):  # continue
             self.manager.cont()
 
         elif cmd.startswith("w"):
-            self.manager.write(cmd[2:].encode() + b"\n")    #TODO
+            self.manager.write(cmd[2:].encode() + b"\n")  # TODO
 
         elif cmd.startswith("fork"):
             self.manager.fork()
@@ -101,11 +102,29 @@ class InputHandler:
             print(self.manager.getCurrentProcess().ptraceProcess.breakpoints)
             self.manager.resumeFromBreakpoint()
 
-
-    def handle_hyx(self, pollresult):
-        raise NotImplementedError
+    def handle_hyx(self, event):
         # should input handler or processmanager handle this? or hyxtalker?
         # receive check value here, forward to the respective hyxtalker function
+        hyxtalker = self.hyxTalker
+
+        from select import POLLHUP, POLLIN
+        import Constants as cons
+
+        if event & POLLHUP:
+            print("hyx closed, remaining data = %s" % hyxtalker.hyxsock.recv(1000))
+            return
+        if event != POLLIN:
+            print(event)
+            raise NotImplementedError
+
+        check = hyxtalker.hyxsock.recv(1)
+        if check == cons.CMD_REQUEST:
+            raise NotImplementedError
+        elif check == cons.UPD_FROMBLOB or check == cons.UPD_FROMBLOBNEXT:
+            hyxtalker.getUpdate(isNextByte=check == cons.UPD_FROMBLOBNEXT)
+        else:
+            print(check, event)
+            raise NotImplementedError
 
     def handle_procout(self, name, fd, event):
         procWrap = self.manager.getCurrentProcess()
@@ -127,7 +146,7 @@ class InputHandler:
         else:
             print("there already is a heap")
 
-        heap= currentProcess.getHeap()
+        heap = currentProcess.getHeap()
         print(heap.start, heap.file_path)
 
         file_path = currentProcess.heap.file_path
@@ -139,13 +158,13 @@ class InputHandler:
 
 if __name__ == "__main__":
     import utils
+
     utils.changeLogHandler()
 
-    path_to_hack= "/home/jasper/university/barbeit/utilstest/cprograms/mallocinfgets"
-    #path_to_hack= "/home/jasper/university/barbeit/syscalltrap/t2"
+    path_to_hack = "/home/jasper/university/barbeit/utilstest/cprograms/mallocinfgets"
+    # path_to_hack= "/home/jasper/university/barbeit/syscalltrap/t2"
     path_to_hack = "/home/jasper/university/barbeit/dummy/minimalloc2"
     path_to_hack = "/home/jasper/university/barbeit/utilstest/infgets"
 
-
-    i= InputHandler(path_to_hack)
+    i = InputHandler(path_to_hack)
     i.inputLoop()

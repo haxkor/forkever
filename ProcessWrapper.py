@@ -89,7 +89,7 @@ class ProcessWrapper:
             return self.heap
 
 
-    def setupPtraceProcess(self):
+    def setupPtraceProcess(self) -> PtraceProcess:
         from ptrace.debugger.debugger import PtraceDebugger
 
         assert isinstance(self.debugger, PtraceDebugger)
@@ -118,6 +118,12 @@ class ProcessWrapper:
 
         for bp in bp_list:
             addSingleBP(bp)
+
+    def readMappings(self):
+        return self.ptraceProcess.readMappings()
+
+    def getPieAdress(self,reload=False):
+        maps= self.readMappings()
 
     def writeToBuf(self, text):
         """write to the processes stdin buffer, awaiting read syscall"""
@@ -216,11 +222,9 @@ class ProcessWrapper:
 
         return ProcessWrapper(parent=self, ptraceprocess=child)
 
-
     def getNextEvent(self, singlestep=False):
         """ continues execution until an interesing syscall is entered/exited or
             some other event (hopyfully breakpoint sigtrap) happens"""
-
         def isSysTrap(event):
             return isinstance(event, ProcessSignal) and event.signum == 0x80 | SIGTRAP
 
@@ -250,7 +254,6 @@ class ProcessWrapper:
             proc.singleStep()
 
         event = proc.waitEvent()
-
         if not isSysTrap(event):  # TODO check if event happened while in syscall
             return event
 
