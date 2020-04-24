@@ -91,3 +91,8 @@ class HyxTalker():
             self.sendUpdates(change)
         else:
             raise NotImplementedError
+
+    def destroy(self):
+        self.hyxsock.close()
+        self.rootsock.close()
+        self.hyxprocess.kill()

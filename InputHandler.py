@@ -112,6 +112,7 @@ class InputHandler:
 
         if event & POLLHUP:
             print("hyx closed, remaining data = %s" % hyxtalker.hyxsock.recv(1000))
+            self.delete_hyx()
             return
         if event != POLLIN:
             print(event)
@@ -130,6 +131,13 @@ class InputHandler:
         procWrap = self.manager.getCurrentProcess()
         assert isinstance(procWrap, ProcessWrapper)
         print("proc %s wrote: " % name, procWrap.out_pipe.read(4096))
+
+    def delete_hyx(self):
+        self.hyxTalker.destroy()
+        self.hyxTalker=None
+        self.inputPoll.unregister("hyx")
+
+
 
     def init_hyx(self):
 

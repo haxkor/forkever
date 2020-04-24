@@ -43,6 +43,13 @@ class PaulaPoll:
     def unregister(self, name_or_fd):
         assert isinstance(name_or_fd, int) or isinstance(name_or_fd, str)
         assert name_or_fd in self.dict
+
+        if isinstance(name_or_fd,str):
+            unreg=self.dict[name_or_fd]
+        else:
+            unreg=name_or_fd
+
+        self.pollObj.unregister(unreg)
         del self.dict[name_or_fd]
 
     def poll(self):  # get name, fd and event

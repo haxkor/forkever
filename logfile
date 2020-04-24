@@ -1,48 +1,7 @@
 init login infinite loop
-in update from blob
 poll returned 1
 case 1 in loop
-in sendToPaulasent stuff to paula, start= 608, len= 1
-in infinite loop
-in update from blob
-poll returned 1
-case 1 in loop
-in sendToPaulasent stuff to paula, start= 609, len= 1
-in infinite loop
-in update from blob
-poll returned 1
-case 1 in loop
-in sendToPaulasent stuff to paula, start= 610, len= 1
-in infinite loop
-in update from blob
-poll returned 1
-case 1 in loop
-in sendToPaulasent stuff to paula, start= 611, len= 1
-in infinite loop
-in update from blob
-poll returned 1
-case 1 in loop
-in sendToPaulasent stuff to paula, start= 612, len= 1
-in infinite loop
-in update from blob
-poll returned 1
-case 1 in loop
-in sendToPaulasent stuff to paula, start= 613, len= 1
-in infinite loop
-in update from blob
-poll returned 1
-case 1 in loop
-in sendToPaulasent stuff to paula, start= 614, len= 1
-in infinite loop
-in update from blob
-poll returned 1
-case 1 in loop
-in sendToPaulasent stuff to paula, start= 600, len= 1
-in infinite loop
-in update from blob
-poll returned 1
-case 1 in loop
-in sendToPaulasent stuff to paula, start= 568, len= 1
-in infinite loop
-in update from blob
-poll returned 1
+fromPaula() has been called
+calling getUpdates
+in getUpdates_paula
+updates written, returning
