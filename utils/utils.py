@@ -72,5 +72,5 @@ def changeLogHandler():
 tmppath = "/tmp/paula-%s/" % timestamp()
 os.mkdir(tmppath)
 
-path_launcher = "launcher/dummylauncher"
+path_launcher = "../launcher/dummylauncher"
 

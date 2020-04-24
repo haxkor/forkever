@@ -1,6 +1,6 @@
-from PaulaPoll import PaulaPoll
+from utils.PaulaPoll import PaulaPoll
 from ProcessManager import ProcessManager
-from PollableQueue import PollableQueue
+from utils.PollableQueue import PollableQueue
 
 from threading import Thread
 from InputReader import mainReader
@@ -145,7 +145,6 @@ class InputHandler:
         assert isinstance(currentProcess, ProcessWrapper)
 
         if currentProcess.heap is None:  # TODO
-            from HeapClass import Heap
             try:
                 currentProcess.setHeap()
             except KeyError:
@@ -165,7 +164,7 @@ class InputHandler:
 
 
 if __name__ == "__main__":
-    import utils
+    from utils import utils
 
     utils.changeLogHandler()
 

@@ -1,7 +1,0 @@
-init login infinite loop
-poll returned 1
-case 1 in loop
-fromPaula() has been called
-calling getUpdates
-in getUpdates_paula
-updates written, returning

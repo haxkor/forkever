@@ -1,8 +1,7 @@
-from utils import tmppath
+from utils.utils import tmppath
 from re import findall
 
 import hashlib
-from weakref import ref
 
 
 def hashfunc(obj):
