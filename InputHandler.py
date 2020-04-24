@@ -136,6 +136,7 @@ class InputHandler:
         self.hyxTalker.destroy()
         self.hyxTalker=None
         self.inputPoll.unregister("hyx")
+        #bob
 
 
 
