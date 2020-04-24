@@ -1,4 +1,4 @@
-from PaulaPipe import Pipe
+from utilsFolder.PaulaPipe import Pipe
 
 from ptrace.debugger.process import PtraceProcess
 from ptrace.debugger.process_event import ProcessExecution

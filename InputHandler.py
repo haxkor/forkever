@@ -1,9 +1,9 @@
-from PaulaPoll import PaulaPoll
+from utilsFolder.PaulaPoll import PaulaPoll
 from ProcessManager import ProcessManager
 from PollableQueue import PollableQueue
 
 from threading import Thread
-from InputReader import mainReader
+from utilsFolder.InputReader import mainReader
 
 from ProcessWrapper import ProcessWrapper
 from HyxTalker import HyxTalker
