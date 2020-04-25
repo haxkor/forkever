@@ -59,3 +59,14 @@ class NewProcessEvent(ProcessEvent):
 
     def __init__(self, process):
         ProcessEvent.__init__(self, process, "New process %s" % process.pid)
+
+class ProcessStop(ProcessEvent):
+    """
+    Process Stopped:
+    If a seized process forks, its child starts with such an event for example
+
+    added by jasper
+    """
+    def __init__(self, process):
+        ProcessEvent.__init__(self, process, "Process stopped. %s" % process.pid)
+

@@ -13,7 +13,7 @@ from ptrace.binding.func import (   # noqa
 if HAS_PTRACE_EVENTS:
     from ptrace.binding.func import (WPTRACEEVENT,   # noqa
                                      PTRACE_EVENT_FORK, PTRACE_EVENT_VFORK, PTRACE_EVENT_CLONE,
-                                     PTRACE_EVENT_EXEC,
+                                     PTRACE_EVENT_EXEC, PTRACE_EVENT_STOP,
                                      ptrace_setoptions, ptrace_geteventmsg)
 if HAS_PTRACE_SINGLESTEP:
     from ptrace.binding.func import ptrace_singlestep   # noqa

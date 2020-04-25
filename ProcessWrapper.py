@@ -12,6 +12,21 @@ from HeapClass import Heap
 
 from ptrace.func_call import FunctionCallOptions
 
+class ProgramInfo:
+
+    def __init__(self, path_to_hack:str, pid:int):
+        self.elf = pwn.ELF(path_to_hack)
+        self.pid=pid
+
+    def getAddrOf(self, symbol):
+        try:
+            print(self.elf.symbols)
+            print(self.elf.path)
+            return self.elf.symbols[symbol]
+        except KeyError:
+            return None
+
+
 class ProcessWrapper:
     """Provides an easy way to redirect stdout and stderr using pipes. Write to the processes STDIN and read from STDOUT at any time! """
 
@@ -26,6 +41,7 @@ class ProcessWrapper:
         self.remember_insert_bp=False
         self.atBreakpoint=False
         self.inserted_function_data=False
+
 
         if args:
             assert debugger is not None
@@ -54,6 +70,8 @@ class ProcessWrapper:
 
             self.heap = None  # Heap(self.ptraceProcess.pid)
 
+            self.programinfo= ProgramInfo(args[1], self.getPid())
+
         # this is used when a process is forked by user
         else:
             assert isinstance(parent, ProcessWrapper) and isinstance(ptraceprocess, PtraceProcess)
@@ -71,6 +89,7 @@ class ProcessWrapper:
             self.copyBreakpoints()
 
             self.heap=None
+            self.programinfo=parent.programinfo
 
     def copyBreakpoints(self):
         from ptrace.debugger.process import Breakpoint
@@ -320,11 +339,20 @@ class ProcessWrapper:
             proc.removeBreakpoint(bp)
             print("breakpoint removed")
 
-    def callFunction(self, funcname, *args):
+    def tryFunction(self,funcname,*args):
+        clone= self.forkProcess()
+        clone.callFunction(funcname, *args)
+
+
+    def callFunction(self, funcname, *args, tillResult=False):
         """ immediately calls a desired function by overwriting code that is about to be executed.
             State will be restored as soon as function returns.
-            Can not be called if the process is at a syscall entry"""
+            Can not be called if the process just entered syscall"""
         func_ad = self.programinfo.getAddrOf(funcname)
+        if func_ad is None:
+            print("function %s not found" % funcname)
+            return
+
         proc = self.ptraceProcess
         if proc.syscall_state.next_event == "exit":
             print("about to call syscall, returning")
@@ -353,7 +381,16 @@ class ProcessWrapper:
         finish = ip + len(inject)  # if ip==finish, call afterCallFunction
 
         self.inserted_function_data = (ip, finish, oldbytes, oldregs, funcname)
-        self.cont()
+        if not tillResult:
+            return self.cont()
+        else:
+            result=""
+            while not isinstance(funcname,str) and funcname not in result:
+                result=self.cont()
+            return result
+
+
+
 
     def _afterCallFunction(self):
         proc = self.ptraceProcess
@@ -378,9 +415,6 @@ class ProcessWrapper:
     def cont(self, singlestep=False):
         proc = self.ptraceProcess
 
-        if self.inserted_function_data:
-            print(self.inserted_function_data)
-
         self.syscallsToTrace = ["read", "write", "fork"]
 
         event = self.getNextEvent(singlestep=singlestep)
@@ -397,13 +431,15 @@ class ProcessWrapper:
         if isinstance(event, ProcessSignal):
             if event.signum == SIGTRAP:  # normal trap, maybe breakpoint?
                 ip = proc.getInstrPointer()
-                if ip - 1 in proc.breakpoints.keys():   # did we hit a breakpoint?
-                    print("hit breakpoint at %#x" % (ip - 1))
-                    self.atBreakpoint = True
 
-                if self.atBreakpoint:  # did we just return from an inserted function?
+                if self.inserted_function_data and self.inserted_function_data[1] == ip:
+                    self._afterCallFunction()
+
+                elif ip - 1 in proc.breakpoints.keys():   # did we hit a breakpoint?
+                    print("hit breakpoint at %#x" % (ip - 1))
                     self.reinstertBreakpoint()
-                    self.atBreakpoint = False
+
+
 
             else:
                 print(event)

@@ -45,9 +45,10 @@ if HAS_PTRACE_EVENTS:
     from ptrace.binding import (
         ptrace_setoptions, ptrace_geteventmsg, WPTRACEEVENT,
         PTRACE_EVENT_FORK, PTRACE_EVENT_VFORK, PTRACE_EVENT_CLONE,
-        PTRACE_EVENT_EXEC)
+        PTRACE_EVENT_EXEC, PTRACE_EVENT_STOP )
     NEW_PROCESS_EVENT = (
-        PTRACE_EVENT_FORK, PTRACE_EVENT_VFORK, PTRACE_EVENT_CLONE)
+        PTRACE_EVENT_FORK, PTRACE_EVENT_VFORK,
+        PTRACE_EVENT_CLONE) # this will make a new process
 if HAS_PTRACE_GETREGS:
     from ptrace.binding import ptrace_getregs
 else:
@@ -56,6 +57,8 @@ if HAS_DISASSEMBLER:
     from ptrace.disasm import disassemble, disassembleOne, MAX_INSTR_SIZE
 if HAS_PROC:
     from ptrace.linux_proc import readProcessStat
+
+from ptrace.debugger.process_event import ProcessStop
 
 MIN_CODE_SIZE = 32
 MAX_CODE_SIZE = 1024
@@ -417,6 +420,8 @@ class PtraceProcess(object):
             return NewProcessEvent(new_process)
         elif event == PTRACE_EVENT_EXEC:
             return ProcessExecution(self)
+        elif event == PTRACE_EVENT_STOP:    # add by jasper
+            return ProcessStop(self)
         else:
             raise ProcessError(self, "Unknown ptrace event: %r" % event)
 
@@ -715,6 +720,11 @@ class PtraceProcess(object):
         """
         Address have to be aligned!
         """
+        if word >= (1<<63):
+            from struct import pack, unpack
+            word= pack("<Q", word)
+            word= unpack("<q", word)[0]
+
         ptrace_poketext(self.pid, address, word)
 
     def dumpRegs(self, log=None):

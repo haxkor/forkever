@@ -38,7 +38,9 @@ class InputHandler:
                     self.handle_stdin(pollfd, event)
                 elif "-out" in name:
                     self.handle_procout(name, pollfd, event)
-                    pass
+
+                elif "-err" in name:
+                    self.handle_stderr(event)
 
             else:  # this happens when two sockets are written to at the "same" time
                 print(pollresult)
@@ -46,6 +48,9 @@ class InputHandler:
 
             if self.hyxTalker:
                 self.hyxTalker.updateHyx()
+
+    def handle_stderr(self):
+        print(self.manager.getCurrentProcess().read(0x100,"err"))
 
     # this is called when a new line has been put to the stdinQ
     def handle_stdin(self, fd, event):
@@ -88,6 +93,12 @@ class InputHandler:
         elif cmd.startswith("malloc"):
             self.manager.malloc(10)
 
+        elif cmd.startswith("free"):
+            self.manager.free(int(cmd[5:],16))
+
+        elif cmd.startswith("try"):
+            self.manager.tryFunction(cmd.split(" ")[1],cmd.split(" ")[2:])
+
 
 
 
@@ -98,7 +109,6 @@ class InputHandler:
             self.manager.singlestep()
 
         elif cmd.startswith("res"):
-
             print(self.manager.getCurrentProcess().ptraceProcess.breakpoints)
             self.manager.resumeFromBreakpoint()
 
@@ -172,8 +182,9 @@ if __name__ == "__main__":
 
     path_to_hack = "/home/jasper/university/barbeit/utilstest/cprograms/mallocinfgets"
     # path_to_hack= "/home/jasper/university/barbeit/syscalltrap/t2"
-    path_to_hack = "/home/jasper/university/barbeit/dummy/minimalloc2"
+
     path_to_hack = "/home/jasper/university/barbeit/utilstest/infgets"
+    path_to_hack = "/home/jasper/university/barbeit/dummy/a.out"
 
     i = InputHandler(path_to_hack)
     i.inputLoop()

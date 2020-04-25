@@ -15,17 +15,6 @@ socketname = "/tmp/paulasock"
 from utilsFolder.PaulaPoll import PaulaPoll
 
 
-class ProgramInfo:
-
-    def __init__(self, path_to_hack:str, pid:int):
-        self.elf = pwn.ELF(path_to_hack)
-        self.pid=pid
-
-    def getAddrOf(self, symbol):
-        try:
-            return self.elf.symbols[symbol]
-        except KeyError:
-            return None
 
 
 
@@ -50,7 +39,7 @@ class ProcessManager:
             write_address=True,
         )
 
-        self.programinfo = ProgramInfo(path_to_hack, self.currentProcess.ptraceProcess.pid)
+
 
     def addProcess(self, proc: ProcessWrapper):
         self.processList.append(proc)
@@ -77,6 +66,12 @@ class ProcessManager:
 
     def free(self,pointer):
         return self.getCurrentProcess().free(pointer)
+
+    def tryFunction(self,funcname,args):
+        args=list( int(arg,16) for arg in args)
+        print("trying function %s with args %s" %(funcname,args))
+        self.getCurrentProcess().tryFunction(funcname, *args)
+
 
 
     def fork(self):

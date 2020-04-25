@@ -95,10 +95,8 @@ class HyxTalker():
     def recvCommand(self):
         cmd= self.hyxsock.recv(0x100)
         assert len(cmd) == 0x100
-        print("received cmd= %s" % cmd)
         end= cmd.find(b"\x00")
-        cmd= cmd[:end].decode()
-        return cmd
+        return cmd[:end].decode()
 
     def sendCommandResponse(self, cmd):
         if isinstance(cmd,str):

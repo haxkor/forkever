@@ -10,8 +10,8 @@ if HAS_PTRACE_EVENTS:
     from ptrace.binding.func import (
         PTRACE_O_TRACEFORK, PTRACE_O_TRACEVFORK,
         PTRACE_O_TRACEEXEC, PTRACE_O_TRACESYSGOOD,
-        PTRACE_O_TRACECLONE, THREAD_TRACE_FLAGS)
-
+        PTRACE_O_TRACECLONE, THREAD_TRACE_FLAGS,
+        PTRACE_EVENT_STOP)
 
 class DebuggerError(PtraceError):
     pass
@@ -85,7 +85,7 @@ class PtraceDebugger(object):
 
         try:
             if not seize:   #seizing a process does not stop it
-                process.waitSignals(SIGTRAP, SIGSTOP)
+                process.waitSignals(SIGTRAP, SIGSTOP, PTRACE_EVENT_STOP)
         except KeyboardInterrupt:
             error(
                 "User interrupt! Force the process %s attach "
@@ -204,6 +204,12 @@ class PtraceDebugger(object):
         pid = kw.get('pid', None)
         while True:
             event = self._wait_event(pid)
+
+            if PTRACE_EVENT_STOP in signals:
+                from ptrace.debugger.process_event import ProcessStop
+                if isinstance(event, ProcessStop):
+                    return event
+
             if event.__class__ != ProcessSignal:
                 raise event
             signum = event.signum
