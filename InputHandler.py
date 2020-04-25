@@ -120,7 +120,9 @@ class InputHandler:
 
         check = hyxtalker.hyxsock.recv(1)
         if check == cons.CMD_REQUEST:
-            raise NotImplementedError
+            self.stdinQ.put(hyxtalker.recvCommand() + "\n")
+            hyxtalker.sendCommandResponse("done")
+
         elif check == cons.UPD_FROMBLOB or check == cons.UPD_FROMBLOBNEXT:
             hyxtalker.getUpdate(isNextByte=check == cons.UPD_FROMBLOBNEXT)
         else:
