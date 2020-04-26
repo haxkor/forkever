@@ -6,3 +6,9 @@ CMD_REQUEST_SUCCESS = b"\x51"
 
 
 
+
+RELATIVE_ADRESS_THRESHOLD = 0xFFffFFff
+
+
+from pwn import asm
+SYSCALL_INSTR= asm("syscall")

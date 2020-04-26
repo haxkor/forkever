@@ -611,7 +611,7 @@ class Gdb(Application):
         syscall = state.event(self.syscall_options)
 
         # Display syscall
-        if syscall: #TODO steal this code
+        if syscall:
             if syscall.result is not None:
                 text = "%s = %s" % (syscall.format(), syscall.result_text)
                 if self.show_pid:

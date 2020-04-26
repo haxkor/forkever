@@ -11,6 +11,13 @@ from signal import SIGTRAP
 from HeapClass import Heap
 
 from ptrace.func_call import FunctionCallOptions
+from Constants import RELATIVE_ADRESS_THRESHOLD, SYSCALL_INSTR
+
+from utilsFolder.MapsReader import getMappings
+
+
+
+
 
 class ProgramInfo:
 
@@ -20,12 +27,17 @@ class ProgramInfo:
 
     def getAddrOf(self, symbol):
         try:
-            print(self.elf.symbols)
-            print(self.elf.path)
             return self.elf.symbols[symbol]
         except KeyError:
             return None
 
+    def getBaseImageStart(self):
+        mappings= getMappings(self.pid, self.elf.path)
+
+        keyfunc= lambda mapping: mapping.start
+        start= min(mappings, key=keyfunc)
+        print("getBaseImageStart = %#x" % start)
+        return start
 
 class ProcessWrapper:
     """Provides an easy way to redirect stdout and stderr using pipes. Write to the processes STDIN and read from STDOUT at any time! """
@@ -302,7 +314,10 @@ class ProcessWrapper:
             else:  # about to call
                 print("process is about to syscall %s" % syscall.format())
 
-    def insertBreakpoint(self, adress):
+    def insertBreakpoint(self, adress,force_absolute=False):
+        if not force_absolute and self.programinfo.elf.pie and adress <= RELATIVE_ADRESS_THRESHOLD:
+            adress += self.programinfo.getBaseImageStart()
+
         return self.ptraceProcess.createBreakpoint(adress)
 
 
@@ -315,7 +330,7 @@ class ProcessWrapper:
         bp.desinstall(set_ip=True)
 
         # if the breakpoint was set at a syscall, it will be reinserted after the syscall was executed
-        if proc.readBytes(ip, 2) == b'\x0f\x05':        # syscall instruction
+        if proc.readBytes(ip, 2) == SYSCALL_INSTR:        # syscall instruction
             self.remember_insert_bp = True
         else:
             proc.singleStep()
@@ -362,7 +377,7 @@ class ProcessWrapper:
             return
 
         inject = """
-            mov eax, %d
+            mov eax, %#x
             call eax
             int3""" % func_ad
         inject = pwn.asm(inject)
@@ -381,6 +396,7 @@ class ProcessWrapper:
         finish = ip + len(inject)  # if ip==finish, call afterCallFunction
 
         self.inserted_function_data = (ip, finish, oldbytes, oldregs, funcname)
+
         if not tillResult:
             return self.cont()
         else:

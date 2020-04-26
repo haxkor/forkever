@@ -7,6 +7,7 @@ from utilsFolder.InputReader import mainReader
 
 from ProcessWrapper import ProcessWrapper
 from HyxTalker import HyxTalker
+from utilsFolder.Parsing import parseInteger
 
 
 class InputHandler:
@@ -21,6 +22,68 @@ class InputHandler:
         self.reader_thread.start()
 
         self.hyxTalker = None
+
+    def execute(self,cmd):
+        try:
+            return self._execute(cmd)
+        except ValueError as err:
+            return str(err)
+
+
+    def _execute(self, cmd):
+        manager = self.manager
+        proc = manager.getCurrentProcess().ptraceProcess
+
+        if cmd == "hyx" and not self.hyxTalker:
+            self.init_hyx()
+
+        elif cmd.startswith("c"):  # continue
+            self.manager.cont()
+
+        elif cmd.startswith("w"):
+            self.manager.write(cmd[2:].encode() + b"\n")  # TODO
+
+        elif cmd.startswith("fork"):
+            self.manager.fork()
+
+        elif cmd.startswith("proclist"):
+            print(self.manager.processList)
+
+        elif cmd.startswith("sw"):  #switch
+            try:
+                _,_,pid=cmd.partition(" ")
+                pid= parseInteger(pid)
+            except IndexError:
+                pid=None
+            return self.manager.switchProcess(pid=pid)
+
+        elif cmd.startswith("b"):
+            _,_,adress= cmd.partition(" ")
+            try:
+                adress= parseInteger(adress, ptraceProc=proc)
+            except ValueError as err:
+                return str(err)
+
+            self.manager.insertBreakpoint(adress)
+
+        elif cmd.startswith("malloc"):
+            _,_,val= cmd.partition(" ")
+            val=parseInteger(val,proc)
+            self.manager.malloc(val)
+
+        elif cmd.startswith("free"):
+            _,_,pointer= cmd.partition(" ")
+            pointer=parseInteger(pointer,proc)
+            self.manager.free(pointer)
+
+        elif cmd.startswith("try"):
+            self.manager.tryFunction(cmd.split(" ")[1],cmd.split(" ")[2:])
+
+        elif cmd.startswith("list b"):
+            print(self.manager.getCurrentProcess().ptraceProcess.breakpoints)
+
+        elif cmd.startswith("s"):
+            self.manager.cont(singlestep=True)
 
     def inputLoop(self):
 
@@ -58,59 +121,11 @@ class InputHandler:
         print(cmd)
         assert isinstance(cmd, str)
         import signal
+
         if event == signal.SIGWINCH:
             return
+        print(self.execute(cmd))
 
-        if cmd == "hyx" and not self.hyxTalker:
-            self.init_hyx()
-
-
-        elif cmd.startswith("c"):  # continue
-            self.manager.cont()
-
-        elif cmd.startswith("w"):
-            self.manager.write(cmd[2:].encode() + b"\n")  # TODO
-
-        elif cmd.startswith("fork"):
-            self.manager.fork()
-
-        elif cmd.startswith("proclist"):
-            print(self.manager.processList)
-
-        elif cmd.startswith("switch"):
-            self.manager.switchProcess()
-
-        elif cmd.startswith("b"):
-            if cmd.startswith("b1"):
-                self.manager.insertBreakpoint(0x401153)
-            elif cmd.startswith("b2"):
-                self.manager.insertBreakpoint(0x401148)
-            elif cmd.startswith("b3"):
-                self.manager.insertBreakpoint(0x401158)
-            else:
-                self.manager.insertBreakpoint(int(cmd[2:], 16))
-
-        elif cmd.startswith("malloc"):
-            self.manager.malloc(10)
-
-        elif cmd.startswith("free"):
-            self.manager.free(int(cmd[5:],16))
-
-        elif cmd.startswith("try"):
-            self.manager.tryFunction(cmd.split(" ")[1],cmd.split(" ")[2:])
-
-
-
-
-        elif cmd.startswith("list b"):
-            print(self.manager.getCurrentProcess().ptraceProcess.breakpoints)
-
-        elif cmd.startswith("s"):
-            self.manager.singlestep()
-
-        elif cmd.startswith("res"):
-            print(self.manager.getCurrentProcess().ptraceProcess.breakpoints)
-            self.manager.resumeFromBreakpoint()
 
     def handle_hyx(self, event):
         # should input handler or processmanager handle this? or hyxtalker?
