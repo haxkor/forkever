@@ -34,56 +34,55 @@ class InputHandler:
         manager = self.manager
         proc = manager.getCurrentProcess().ptraceProcess
 
+        result=""
         if cmd == "hyx" and not self.hyxTalker:
             self.init_hyx()
 
         elif cmd.startswith("c"):  # continue
-            manager.cont()
+            result=manager.cont()
 
         elif cmd.startswith("w"):
-            manager.write(cmd[2:].encode() + b"\n")  # TODO
+            result=manager.write(cmd[2:].encode() + b"\n")  # TODO
 
         elif cmd.startswith("fork"):
-            manager.fork()
+            result=manager.fork()
 
         elif cmd.startswith("proclist"):
             print(manager.processList)
 
         elif cmd.startswith("sw"):  #switch
-            try:
-                _,_,pid=cmd.partition(" ")
-                pid= parseInteger(pid)
-            except IndexError:
+            _,_,pid=cmd.partition(" ")
+            if pid!="":
+                pid=int(pid)
+            else:
                 pid=None
-            return manager.switchProcess(pid=pid)
+            result= manager.switchProcess(pid=pid)
 
         elif cmd.startswith("b"):
             _,_,adress= cmd.partition(" ")
-            try:
-                adress= parseInteger(adress, ptraceProc=proc)
-            except ValueError as err:
-                return str(err)
-
-            manager.insertBreakpoint(adress)
+            adress= parseInteger(adress, ptraceProc=proc)
+            result=manager.insertBreakpoint(adress)
 
         elif cmd.startswith("malloc"):
             _,_,val= cmd.partition(" ")
             val=parseInteger(val,proc)
-            return manager.malloc(val)
+            result= manager.malloc(val)
 
         elif cmd.startswith("free"):
             _,_,pointer= cmd.partition(" ")
             pointer=parseInteger(pointer,proc)
-            manager.free(pointer)
+            result=manager.free(pointer)
 
         elif cmd.startswith("try"):
-            manager.tryFunction(cmd.split(" ")[1],cmd.split(" ")[2:])
+            result=manager.tryFunction(cmd.split(" ")[1],cmd.split(" ")[2:])
 
         elif cmd.startswith("list b"):
             print(manager.getCurrentProcess().ptraceProcess.breakpoints)
 
         elif cmd.startswith("s"):
-            manager.cont(singlestep=True)
+            result=manager.cont(singlestep=True)
+
+        return result
 
     def inputLoop(self):
 
@@ -145,8 +144,10 @@ class InputHandler:
 
         check = hyxtalker.hyxsock.recv(1)
         if check == cons.CMD_REQUEST:
-            self.stdinQ.put(hyxtalker.recvCommand() + "\n")
-            hyxtalker.sendCommandResponse("done")
+            cmd=hyxtalker.recvCommand()
+            print("%s\t(hyx)" % cmd)
+            result=self.execute(cmd)
+            hyxtalker.sendCommandResponse(result)
 
         elif check == cons.UPD_FROMBLOB or check == cons.UPD_FROMBLOBNEXT:
             hyxtalker.getUpdate(isNextByte=check == cons.UPD_FROMBLOBNEXT)

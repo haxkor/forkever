@@ -11,7 +11,7 @@ from signal import SIGTRAP
 from HeapClass import Heap
 
 from ptrace.func_call import FunctionCallOptions
-from Constants import RELATIVE_ADRESS_THRESHOLD, SYSCALL_INSTR
+from Constants import RELATIVE_ADRESS_THRESHOLD, SYSCALL_INSTR, PRINT_BORING_SYSCALLS
 
 from utilsFolder.MapsReader import getMappings
 
@@ -272,19 +272,13 @@ class ProcessWrapper:
             else:
                 return count, self.writeBufToPipe(count)
 
-
         if self.stdinRequested:
             if self.writeBufToPipe(self.stdinRequested) == 0:
                 return "no data to stdin was provided"
             self.stdinRequested = 0
 
-
-
         proc = self.ptraceProcess
         assert isinstance(proc, PtraceProcess)  # useless comment:
-
-
-
 
         # if we are continuing from a breakpoint, singlestep over the breakpoint and reinsert it.
         # if we are not singlestepping and did not hit a syscall / exceptional event, continue till next syscall
@@ -305,8 +299,6 @@ class ProcessWrapper:
         if not isSysTrap(event):
             return event
 
-        #if self.remember_insert_bp:     #if a bp was reinserted at a syscall instruction, reinsert it only after the syscall is done
-
         state = proc.syscall_state
         syscall = state.event(self.syscall_options)
 
@@ -321,9 +313,8 @@ class ProcessWrapper:
 
         # skip over boring syscalls
         if syscall.name not in self.syscallsToTrace:
-            if syscall.result is not None:  # print results of boring syscalls
-                # print("syscall %s = %s" % (syscall.format(), syscall.result_text))
-                pass
+            if syscall.result is not None and PRINT_BORING_SYSCALLS:  # print results of boring syscalls
+                print("syscall %s = %s" % (syscall.format(), syscall.result_text))
 
             return self.getNextEvent()
 
@@ -416,15 +407,7 @@ class ProcessWrapper:
 
         self.inserted_function_data = (ip, finish, oldbytes, oldregs, funcname)
 
-        if not tillResult:
-            return self.cont()
-        else:
-            result=""
-            while not isinstance(funcname,str) and funcname not in result:
-                result=self.cont()
-            return result
-
-
+        return self.cont()
 
 
     def _afterCallFunction(self):
@@ -460,7 +443,6 @@ class ProcessWrapper:
             print("finiship= %#x" % self.inserted_function_data[1])
             self._afterCallFunction()
 
-
         if isinstance(event, ProcessSignal):
             if event.signum == SIGTRAP:  # normal trap, maybe breakpoint?
                 ip = proc.getInstrPointer()
@@ -469,15 +451,21 @@ class ProcessWrapper:
                     return self._afterCallFunction()
 
                 elif ip - 1 in proc.breakpoints.keys():   # did we hit a breakpoint?
-                    print("hit breakpoint at %#x" % (ip - 1))
                     self.reinstertBreakpoint()
+                    return "hit breakpoint at %#x" % (ip - 1)
 
+                elif singlestep:
+                    return "ip=%#x" % ip
 
-
+                else:
+                    print(event)
+                    raise NotImplementedError
             else:
                 print(event)
+                raise NotImplementedError
+        else:
+            raise NotImplementedError
 
-        print("instruction pointer= %#x" % proc.getInstrPointer())
 
 
 

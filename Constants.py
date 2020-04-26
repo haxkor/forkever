@@ -9,6 +9,8 @@ CMD_REQUEST_SUCCESS = b"\x51"
 
 RELATIVE_ADRESS_THRESHOLD = 0xFFffFFff
 
+PRINT_BORING_SYSCALLS = True
+
 
 from pwn import asm
 SYSCALL_INSTR= asm("syscall")
