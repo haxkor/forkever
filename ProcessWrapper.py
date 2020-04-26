@@ -258,6 +258,9 @@ class ProcessWrapper:
         def isSysTrap(event):
             return isinstance(event, ProcessSignal) and event.signum == 0x80 | SIGTRAP
 
+        def isTrap(event):
+            return isinstance(event, ProcessSignal) and event.signum == SIGTRAP
+
         def feedStdin(syscall):
             """called if process wants to read from stdin"""
             assert syscall.result is None  # make sure we are not returning from a syscall
@@ -269,23 +272,40 @@ class ProcessWrapper:
             else:
                 return count, self.writeBufToPipe(count)
 
+
         if self.stdinRequested:
             if self.writeBufToPipe(self.stdinRequested) == 0:
-                print("no data to stdin was provided")
-                return
+                return "no data to stdin was provided"
             self.stdinRequested = 0
+
+
 
         proc = self.ptraceProcess
         assert isinstance(proc, PtraceProcess)  # useless comment:
 
-        if not singlestep:
-            proc.syscall()
-        else:
-            proc.singleStep()
 
-        event = proc.waitEvent()
-        if not isSysTrap(event):  # TODO check if event happened while in syscall
+
+
+        # if we are continuing from a breakpoint, singlestep over the breakpoint and reinsert it.
+        # if we are not singlestepping and did not hit a syscall / exceptional event, continue till next syscall
+        if self.remember_insert_bp:
+            event=self._reinstertBreakpoint()
+            if not singlestep and isTrap(event):
+                proc.syscall()
+                event=proc.waitEvent()
+
+        else:
+            if singlestep:
+                proc.singleStep()
+                event=proc.waitEvent()
+            else:
+                proc.syscall()
+                event= proc.waitEvent()
+
+        if not isSysTrap(event):
             return event
+
+        #if self.remember_insert_bp:     #if a bp was reinserted at a syscall instruction, reinsert it only after the syscall is done
 
         state = proc.syscall_state
         syscall = state.event(self.syscall_options)
@@ -295,7 +315,7 @@ class ProcessWrapper:
                 syscall.arguments[0].value == 0:
             written = feedStdin(syscall)
             if written == 0:
-                return
+                return "no data to stdin was provided"
             else:
                 print("process requests %d bytes from stdin (%d written)" % written)
 
@@ -310,9 +330,9 @@ class ProcessWrapper:
         # we are tracing the specific syscall
         else:
             if syscall.result is not None:  # just returned
-                print("%s = %s" % (syscall.name, syscall.result_text))
+                return "%s = %s" % (syscall.name, syscall.result_text)
             else:  # about to call
-                print("process is about to syscall %s" % syscall.format())
+                return "process is about to syscall %s" % syscall.format()
 
     def insertBreakpoint(self, adress,force_absolute=False):
         if not force_absolute and self.programinfo.elf.pie and adress <= RELATIVE_ADRESS_THRESHOLD:
@@ -330,20 +350,19 @@ class ProcessWrapper:
         bp.desinstall(set_ip=True)
 
         # if the breakpoint was set at a syscall, it will be reinserted after the syscall was executed
-        if proc.readBytes(ip, 2) == SYSCALL_INSTR:        # syscall instruction
-            self.remember_insert_bp = True
-        else:
-            proc.singleStep()
-            proc.waitSignals(SIGTRAP)
-            proc.createBreakpoint(ip)
+        self.remember_insert_bp = ip
 
-    def _reinstertBreakpointAfterSyscall(self):
-        """if a breakpoint was set on a syscall, it is readded after the syscall is done
-            (called by getNextEvent)"""
+    def _reinstertBreakpoint(self):
+        """ this is the actual insertion of the breakpoint"""
+        ip= self.remember_insert_bp
         proc = self.ptraceProcess
-        ip = proc.getInstrPointer() - 2  # syscall instruction is 2 long
+        self.remember_insert_bp = False
+        proc.singleStep()
+        event= proc.waitEvent()
+
         proc.createBreakpoint(ip)
-        self.remember_readd_breakpoint = False
+        assert isinstance(event,ProcessSignal)
+        return event
 
     def removeBreakpoint(self, address):
         proc = self.ptraceProcess
@@ -434,22 +453,20 @@ class ProcessWrapper:
         self.syscallsToTrace = ["read", "write", "fork"]
 
         event = self.getNextEvent(singlestep=singlestep)
-        if event is None:  # happens if an interesting syscall is hit
-            return
+        if isinstance(event, str):  # happens if an interesting syscall is hit
+            return event
 
-        if self.inserted_function_data:
+        if self.inserted_function_data and False:   # this should never be executed
             print("finiship= %#x" % self.inserted_function_data[1])
-            print("calling aftercall")
             self._afterCallFunction()
 
-        print("cont event=", event)
 
         if isinstance(event, ProcessSignal):
             if event.signum == SIGTRAP:  # normal trap, maybe breakpoint?
                 ip = proc.getInstrPointer()
 
                 if self.inserted_function_data and self.inserted_function_data[1] == ip:
-                    self._afterCallFunction()
+                    return self._afterCallFunction()
 
                 elif ip - 1 in proc.breakpoints.keys():   # did we hit a breakpoint?
                     print("hit breakpoint at %#x" % (ip - 1))

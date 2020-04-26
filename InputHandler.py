@@ -38,16 +38,16 @@ class InputHandler:
             self.init_hyx()
 
         elif cmd.startswith("c"):  # continue
-            self.manager.cont()
+            manager.cont()
 
         elif cmd.startswith("w"):
-            self.manager.write(cmd[2:].encode() + b"\n")  # TODO
+            manager.write(cmd[2:].encode() + b"\n")  # TODO
 
         elif cmd.startswith("fork"):
-            self.manager.fork()
+            manager.fork()
 
         elif cmd.startswith("proclist"):
-            print(self.manager.processList)
+            print(manager.processList)
 
         elif cmd.startswith("sw"):  #switch
             try:
@@ -55,7 +55,7 @@ class InputHandler:
                 pid= parseInteger(pid)
             except IndexError:
                 pid=None
-            return self.manager.switchProcess(pid=pid)
+            return manager.switchProcess(pid=pid)
 
         elif cmd.startswith("b"):
             _,_,adress= cmd.partition(" ")
@@ -64,26 +64,26 @@ class InputHandler:
             except ValueError as err:
                 return str(err)
 
-            self.manager.insertBreakpoint(adress)
+            manager.insertBreakpoint(adress)
 
         elif cmd.startswith("malloc"):
             _,_,val= cmd.partition(" ")
             val=parseInteger(val,proc)
-            self.manager.malloc(val)
+            return manager.malloc(val)
 
         elif cmd.startswith("free"):
             _,_,pointer= cmd.partition(" ")
             pointer=parseInteger(pointer,proc)
-            self.manager.free(pointer)
+            manager.free(pointer)
 
         elif cmd.startswith("try"):
-            self.manager.tryFunction(cmd.split(" ")[1],cmd.split(" ")[2:])
+            manager.tryFunction(cmd.split(" ")[1],cmd.split(" ")[2:])
 
         elif cmd.startswith("list b"):
-            print(self.manager.getCurrentProcess().ptraceProcess.breakpoints)
+            print(manager.getCurrentProcess().ptraceProcess.breakpoints)
 
         elif cmd.startswith("s"):
-            self.manager.cont(singlestep=True)
+            manager.cont(singlestep=True)
 
     def inputLoop(self):
 
