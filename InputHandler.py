@@ -147,6 +147,7 @@ class InputHandler:
             cmd=hyxtalker.recvCommand()
             print("%s\t(hyx)" % cmd)
             result=self.execute(cmd)
+            print(result)
             hyxtalker.sendCommandResponse(result)
 
         elif check == cons.UPD_FROMBLOB or check == cons.UPD_FROMBLOBNEXT:
