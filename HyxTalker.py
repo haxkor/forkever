@@ -93,9 +93,11 @@ class HyxTalker():
             raise NotImplementedError
 
     def recvCommand(self):
-        cmd= self.hyxsock.recv(0x100)
-        assert len(cmd) == 0x100
-        end= cmd.find(b"\x00")
+        cmd = bytearray(0x100)
+        assert self.hyxsock.recv_into(cmd) == 0x100
+        replace= cmd.find(b"\x00")
+        cmd[replace:replace+1] = b" "
+        end=cmd.find(b"\x00")
         return cmd[:end].decode()
 
     def sendCommandResponse(self, cmd):

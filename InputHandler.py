@@ -145,7 +145,7 @@ class InputHandler:
         check = hyxtalker.hyxsock.recv(1)
         if check == cons.CMD_REQUEST:
             cmd=hyxtalker.recvCommand()
-            print("%s\t(hyx)" % cmd)
+            print("%s\t (hyx)     " % cmd)
             result=self.execute(cmd)
             print(result)
             hyxtalker.sendCommandResponse(result)
@@ -197,11 +197,12 @@ if __name__ == "__main__":
 
     utils.changeLogHandler()
 
-    path_to_hack = "/home/jasper/university/barbeit/utilstest/cprograms/mallocinfgets"
+    #path_to_hack = "/home/jasper/university/barbeit/utilstest/cprograms/mallocinfgets"
     # path_to_hack= "/home/jasper/university/barbeit/syscalltrap/t2"
 
-    path_to_hack = "/home/jasper/university/barbeit/utilstest/infgets"
+    #path_to_hack = "/home/jasper/university/barbeit/utilstest/infgets"
     path_to_hack = "/home/jasper/university/barbeit/dummy/a.out"
+
 
     i = InputHandler(path_to_hack)
     i.inputLoop()
