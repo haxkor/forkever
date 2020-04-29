@@ -9,7 +9,10 @@ args=parser.parse_args()
 abspath= locateProgram(args.program)
 handler= InputHandler(abspath)
 
-handler.inputLoop()
+try:
+    handler.inputLoop()
+except KeyboardInterrupt:
+    exit(1)
 
 
 

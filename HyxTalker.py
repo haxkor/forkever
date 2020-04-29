@@ -38,15 +38,13 @@ class HyxTalker():
         args = ["x-terminal-emulator", "-e",
                 hyx_path, "-offset", hex(offset), "-socket", socketname, filepath]
 
-        print(argsStr(args))
+        print(argsStr(args))    # incase spawning new window isnt possible
         return Popen(args)
 
     def getSockFd(self):
         return self.hyxsock.fileno()
 
     def sendUpdates(self, tuplelist):
-        print("sendUpdates Tuplelist=", tuplelist)
-
         def makeChangeStruct(start, data):
             ret = pack("<I", start)
             ret += pack("<I", len(data))
@@ -72,7 +70,6 @@ class HyxTalker():
         self.nextpos+= length
 
         data = sock.recv(length)
-        print("data=%s" % data, "len=%d" % length)
         assert len(data) == length
 
         self.heap.writeUpdates(pos, data)
