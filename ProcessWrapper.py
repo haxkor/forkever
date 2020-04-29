@@ -4,14 +4,14 @@ from ptrace.debugger.process import PtraceProcess
 from ptrace.debugger.process_event import ProcessExecution
 import pwn
 from subprocess import Popen
-from utils import path_launcher
+from utilsFolder.utils import path_launcher
 from ptrace.debugger.ptrace_signal import ProcessSignal
 from signal import SIGTRAP
 
 from HeapClass import Heap
 
 from ptrace.func_call import FunctionCallOptions
-from Constants import RELATIVE_ADRESS_THRESHOLD, SYSCALL_INSTR, PRINT_BORING_SYSCALLS
+from Constants import RELATIVE_ADRESS_THRESHOLD, PRINT_BORING_SYSCALLS
 
 from utilsFolder.MapsReader import getMappings
 

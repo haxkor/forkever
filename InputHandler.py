@@ -1,6 +1,6 @@
 from utilsFolder.PaulaPoll import PaulaPoll
 from ProcessManager import ProcessManager
-from PollableQueue import PollableQueue
+from utilsFolder.PollableQueue import PollableQueue
 
 from threading import Thread
 from utilsFolder.InputReader import mainReader
@@ -18,7 +18,7 @@ class InputHandler:
 
         self.stdinQ = PollableQueue()
         self.inputPoll.register(self.stdinQ.fileno(), "userinput")
-        self.reader_thread = Thread(target=mainReader, args=(self.stdinQ,))
+        self.reader_thread = Thread(target=mainReader, args=(self.stdinQ,), daemon=True)
         self.reader_thread.start()
 
         self.hyxTalker = None
@@ -194,7 +194,7 @@ class InputHandler:
 
 
 if __name__ == "__main__":
-    import utils
+    from utilsFolder import utils
 
     utils.changeLogHandler()
 

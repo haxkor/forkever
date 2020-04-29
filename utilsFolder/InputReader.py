@@ -1,4 +1,4 @@
-from PollableQueue import PollableQueue
+from utilsFolder.PollableQueue import PollableQueue
 from sys import stdin
 
 # this will be run in a seperate thread

@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 from ptrace.tools import locateProgram
 from InputHandler import InputHandler
 
+
 parser=ArgumentParser()
 parser.add_argument("program")
 
