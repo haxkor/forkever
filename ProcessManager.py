@@ -5,11 +5,10 @@ from ptrace.debugger import PtraceDebugger
 from ptrace.func_call import FunctionCallOptions
 
 import pwn
+from Constants import path_launcher
 
 hyx_path = "/"
 
-path_launcher = "launcher/dummylauncher"
-path_tohack = "launcher/babymalloc"
 socketname = "/tmp/paulasock"
 
 from utilsFolder.PaulaPoll import PaulaPoll

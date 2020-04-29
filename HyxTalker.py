@@ -1,6 +1,7 @@
 from socket import socket, AF_UNIX, SOCK_STREAM
 from subprocess import Popen
 from struct import pack, unpack
+from Constants import hyx_path
 
 from HeapClass import Heap
 
@@ -9,7 +10,6 @@ UPD_FROMBLOBNEXT = b"\x41"
 UPD_FROMPAULA = b"\x01"
 SZ_SIZET = 8
 
-hyx_path = "/home/jasper/CLionProjects/hyxWIP/hyx-0.1.5/myhyx"
 
 import os
 
