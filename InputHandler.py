@@ -111,8 +111,9 @@ class InputHandler:
             if self.hyxTalker:
                 self.hyxTalker.updateHyx()
 
-    def handle_stderr(self):
-        print(self.manager.getCurrentProcess().read(0x100,"err"))
+    def handle_stderr(self,event):
+        print("got this on stderr")
+        print(self.manager.getCurrentProcess().read(0x1000,"err"))
 
     # this is called when a new line has been put to the stdinQ
     def handle_stdin(self, fd, event):

@@ -53,6 +53,9 @@ class ProcessManager:
     def free(self, pointer):
         return self.getCurrentProcess().free(pointer)
 
+    def malloc(self, val):
+        return self.getCurrentProcess().malloc(val)
+
     def tryFunction(self, funcname, args):
         args = list(int(arg, 16) for arg in args)
         print("trying function %s with args %s" % (funcname, args))

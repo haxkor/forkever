@@ -11,7 +11,6 @@ def hashfunc(obj):
 class Heap:
 
     def __init__(self, procWrap):
-        print("\nyo im heap\n")
         self.processWrapper = procWrap
         self.pid = procWrap.getPid()
         self.start, self.stop = self.getStartStop()

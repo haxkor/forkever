@@ -407,7 +407,8 @@ class ProcessWrapper:
 
         self.inserted_function_data = (ip, finish, oldbytes, oldregs, funcname)
 
-        return self.cont()
+        res= self.cont()
+        return "none" if res is None else res
 
 
     def _afterCallFunction(self):
@@ -416,16 +417,15 @@ class ProcessWrapper:
 
         proc.writeBytes(originalip, oldbytes)
         result = proc.getreg("rax")
-        print("%s returned %#x" % (funcname, result))
         proc.setregs(oldregs)
         self.inserted_function_data = None
+        return "%s returned %#x" % (funcname, result)
 
     def malloc(self, n):
-        self.callFunction("plt.malloc", n)
+        return self.callFunction("plt.malloc", n)
 
     def free(self,pointer,force=False):
-        self.callFunction("plt.free", pointer)
-        return "free was called"
+        return self.callFunction("plt.free", pointer)
 
     def singlestep(self):
         return self.cont(singlestep=True)
@@ -438,10 +438,6 @@ class ProcessWrapper:
         event = self.getNextEvent(singlestep=singlestep)
         if isinstance(event, str):  # happens if an interesting syscall is hit
             return event
-
-        if self.inserted_function_data and False:   # this should never be executed
-            print("finiship= %#x" % self.inserted_function_data[1])
-            self._afterCallFunction()
 
         if isinstance(event, ProcessSignal):
             if event.signum == SIGTRAP:  # normal trap, maybe breakpoint?
