@@ -194,6 +194,7 @@ class ProcessWrapper:
         if self.heap is None:
             self.heap = Heap(self)
 
+
     def forkProcess(self):
         """ forks the process. If the process just syscalled (and is trapped in the syscall entry),
             the forked child starts just before that syscall."""
@@ -252,78 +253,6 @@ class ProcessWrapper:
 
         return ProcessWrapper(parent=self, ptraceprocess=child)
 
-    def getNextEvent(self, singlestep=False):
-        """ continues execution until an interesing syscall is entered/exited or
-            some other event (hopyfully breakpoint sigtrap) happens"""
-        def isSysTrap(event):
-            return isinstance(event, ProcessSignal) and event.signum == 0x80 | SIGTRAP
-
-        def isTrap(event):
-            return isinstance(event, ProcessSignal) and event.signum == SIGTRAP
-
-        def feedStdin(syscall):
-            """called if process wants to read from stdin"""
-            assert syscall.result is None  # make sure we are not returning from a syscall
-            count = syscall.arguments[2].value  # how much is read
-            if len(self.stdin_buf) == 0:
-                print("process requests %d bytes from stdin" % (count))
-                self.stdinRequested = count
-                return 0
-            else:
-                return count, self.writeBufToPipe(count)
-
-        if self.stdinRequested:
-            if self.writeBufToPipe(self.stdinRequested) == 0:
-                return "no data to stdin was provided"
-            self.stdinRequested = 0
-
-        proc = self.ptraceProcess
-        assert isinstance(proc, PtraceProcess)  # useless comment:
-
-        # if we are continuing from a breakpoint, singlestep over the breakpoint and reinsert it.
-        # if we are not singlestepping and did not hit a syscall / exceptional event, continue till next syscall
-        if self.remember_insert_bp:
-            event=self._reinstertBreakpoint()
-            if not singlestep and isTrap(event):
-                proc.syscall()
-                event=proc.waitEvent()
-
-        else:
-            if singlestep:
-                proc.singleStep()
-                event=proc.waitEvent()
-            else:
-                proc.syscall()
-                event= proc.waitEvent()
-
-        if not isSysTrap(event):
-            return event
-
-        state = proc.syscall_state
-        syscall = state.event(self.syscall_options)
-
-        # if process is about to read from stdin, feed it what we have. if nothing is available, notify user
-        if syscall.name == "read" and state.next_event == "exit" and \
-                syscall.arguments[0].value == 0:
-            written = feedStdin(syscall)
-            if written == 0:
-                return "no data to stdin was provided"
-            else:
-                print("process requests %d bytes from stdin (%d written)" % written)
-
-        # skip over boring syscalls
-        if syscall.name not in self.syscallsToTrace:
-            if syscall.result is not None and PRINT_BORING_SYSCALLS:  # print results of boring syscalls
-                print("syscall %s = %s" % (syscall.format(), syscall.result_text))
-
-            return self.getNextEvent()
-
-        # we are tracing the specific syscall
-        else:
-            if syscall.result is not None:  # just returned
-                return "%s = %s" % (syscall.name, syscall.result_text)
-            else:  # about to call
-                return "process is about to syscall %s" % syscall.format()
 
     def insertBreakpoint(self, adress,force_absolute=False):
         if not force_absolute and self.programinfo.elf.pie and adress <= RELATIVE_ADRESS_THRESHOLD:
@@ -461,6 +390,79 @@ class ProcessWrapper:
                 raise NotImplementedError
         else:
             raise NotImplementedError
+
+    def getNextEvent(self, singlestep=False):
+        """ continues execution until an interesing syscall is entered/exited or
+            some other event (hopyfully breakpoint sigtrap) happens"""
+        def isSysTrap(event):
+            return isinstance(event, ProcessSignal) and event.signum == 0x80 | SIGTRAP
+
+        def isTrap(event):
+            return isinstance(event, ProcessSignal) and event.signum == SIGTRAP
+
+        def feedStdin(syscall):
+            """called if process wants to read from stdin"""
+            assert syscall.result is None  # make sure we are not returning from a syscall
+            count = syscall.arguments[2].value  # how much is read
+            if len(self.stdin_buf) == 0:
+                print("process requests %d bytes from stdin" % (count))
+                self.stdinRequested = count
+                return 0
+            else:
+                return count, self.writeBufToPipe(count)
+
+        if self.stdinRequested:
+            if self.writeBufToPipe(self.stdinRequested) == 0:
+                return "no data to stdin was provided"
+            self.stdinRequested = 0
+
+        #
+        '''this is the actual start of the function'''
+        proc = self.ptraceProcess
+        assert isinstance(proc, PtraceProcess)  # useless comment:
+
+        # if we are continuing from a breakpoint, singlestep over the breakpoint and reinsert it.
+        # if we are not singlestepping and did not hit a syscall / exceptional event, continue till next syscall
+        if self.remember_insert_bp:
+            event=self._reinstertBreakpoint()
+            if not singlestep and isTrap(event):
+                proc.syscall()
+                event=proc.waitEvent()
+        else:
+            if singlestep:
+                proc.singleStep()
+            else:
+                proc.syscall()
+            event= proc.waitEvent()
+
+        if not isSysTrap(event):
+            return event
+
+        state = proc.syscall_state
+        syscall = state.event(self.syscall_options)
+
+        # if process is about to read from stdin, feed it what we have. if nothing is available, notify user
+        if syscall.name == "read" and state.next_event == "exit" and \
+                syscall.arguments[0].value == 0:
+            written = feedStdin(syscall)
+            if written == 0:
+                return "no data to stdin was provided"
+            else:
+                print("process requests %d bytes from stdin (%d written)" % written)
+
+        # skip over boring syscalls
+        if syscall.name not in self.syscallsToTrace:
+            if syscall.result is not None and PRINT_BORING_SYSCALLS:  # print results of boring syscalls
+                print("syscall %s = %s" % (syscall.format(), syscall.result_text))
+
+            return self.getNextEvent()
+
+        # we are tracing the specific syscall
+        else:
+            if syscall.result is not None:  # just returned
+                return "%s = %s" % (syscall.name, syscall.result_text)
+            else:  # about to call
+                return "process is about to syscall %s" % syscall.format()
 
 
 

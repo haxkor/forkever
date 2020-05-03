@@ -2,6 +2,7 @@ from utilsFolder.utils import tmppath
 from re import findall
 
 import hashlib
+from utilsFolder.MapsReader import getMappings
 
 
 def hashfunc(obj):
@@ -28,31 +29,29 @@ class Heap:
             start, end = findall(r"\b[0-9A-Fa-f]+\b", line)[:2]
             return int(start, 16), int(end, 16)
 
-        with open("/proc/%d/maps" % self.pid, "r") as maps:
-            f = lambda l: "[heap]" in l  # filter for the one line we care about
-            start_end_tuple = list(extractAddresses(line) for line in filter(f, maps.readlines()))
+        heapmap= getMappings(self.pid, "heap")
+        assert len(heapmap) == 1
+        info= heapmap[0]
+        print("start stop=", info.start,info.end)
+        return info.start, info.end
 
-            if len(start_end_tuple) == 0:
-                raise KeyError("no heap")
-            assert len(start_end_tuple) == 1  # make sure there is only one segment
-            start, end = start_end_tuple[0]
-        return start, end
+
 
 
     def checkChange(self):
         """checks if the heap changed. if some bytes changed, return the tuplelist indicating the changes.
-            if the size of the heap changed, return that (does not change the bytearray)"""     # TODO make this an iterator
+            if the size of the heap changed, return that (does not change the bytearray)"""  # TODO make this an iterator
 
         def findChanges():
             from itertools import count
             start = 0
             length = 0
             result = []
-            for old, new,ind in zip(self.heapbytes, buf, count()):
+            for old, new, ind in zip(self.heapbytes, buf, count()):
                 if old == new:
                     if length > 0:
-                        data= buf[start:start+length]
-                        #if length == 1:     # if data is a single byte, python converts it to an int
+                        data = buf[start:start + length]
+                        # if length == 1:     # if data is a single byte, python converts it to an int
                         #    data= bytes([data])
                         result.append((start, data))
                     length = 0
@@ -75,7 +74,7 @@ class Heap:
                 buf = bytearray(self.stop - self.start)
                 assert self.stop - self.start == mem.readinto(buf)
             newhash = hashlib.sha3_224(buf).digest()
-            #print("hash= %s" % newhash)
+            # print("hash= %s" % newhash)
             if newhash != self.hash:
                 self.hash = newhash
                 tuplelist = findChanges()
@@ -101,15 +100,11 @@ class Heap:
             heapcopy.write(mem.read(end - start))
         return self.file_path
 
-    def writeUpdates(self,pos:int,data:bytes):
-        pos+=self.start
+    def writeUpdates(self, pos: int, data: bytes):
+        pos += self.start
         assert self.start <= pos <= self.stop and pos + len(data) <= self.stop
-        self.processWrapper.ptraceProcess.writeBytes(pos,data)
+        self.processWrapper.ptraceProcess.writeBytes(pos, data)
 
-        pos-= self.start
-        self.heapbytes[pos:pos+len(data)] = data
-        self.hash= hashlib.sha3_224(self.heapbytes).digest()
-
-
-
-
+        pos -= self.start
+        self.heapbytes[pos:pos + len(data)] = data
+        self.hash = hashlib.sha3_224(self.heapbytes).digest()

@@ -163,7 +163,7 @@ class InputHandler:
         print("proc %s wrote: " % name, procWrap.out_pipe.read(4096))
 
     def delete_hyx(self):
-        self.hyxTalker.destroy()
+        self.hyxTalker.destroy(rootsock=True)
         self.hyxTalker=None
         self.inputPoll.unregister("hyx")
 
@@ -188,9 +188,8 @@ class InputHandler:
 
         file_path = currentProcess.heap.file_path
         offset = currentProcess.heap.start
-        self.hyxTalker = HyxTalker(self.manager.socketname, currentProcess.heap)
+        self.hyxTalker = HyxTalker(self.manager.socketname, currentProcess.heap, self.inputPoll)
 
-        self.inputPoll.register(self.hyxTalker.getSockFd(), "hyx")
 
 
 if __name__ == "__main__":
