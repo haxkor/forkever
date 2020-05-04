@@ -1,7 +1,7 @@
 from socket import socket, AF_UNIX, SOCK_STREAM
 from subprocess import Popen
 from struct import pack, unpack
-from Constants import hyx_path
+from Constants import hyx_path, runargs
 
 from utilsFolder.PaulaPoll import PaulaPoll
 
@@ -9,13 +9,13 @@ from HeapClass import Heap
 
 SZ_SIZET = 8
 
-from Constants import UPD_FROMBLOB, UPD_FROMBLOBNEXT, UPD_FROMPAULA, UPD_FROMPAULA_ALLHEAP
+from Constants import UPD_FROMBLOB, UPD_FROMBLOBNEXT, UPD_FROMPAULA, UPD_FROMPAULA_INSERT
 
 import os
 
 
 class HyxTalker():
-    def __init__(self, socketname: str, heapobj: Heap, poll:PaulaPoll):
+    def __init__(self, socketname: str, heapobj: Heap, poll: PaulaPoll):
         self.rootsock = socket(AF_UNIX, SOCK_STREAM)
         self._socketname = socketname
 
@@ -28,10 +28,9 @@ class HyxTalker():
 
         self.hyxprocess = None
         self.hyxsock = None
+        self.poll = poll
         self.launchHyx(heapobj)
 
-
-        self.poll=poll
 
     def launchHyx(self, heapobj: Heap):
         def argsStr(args):
@@ -41,11 +40,15 @@ class HyxTalker():
         offset = heapobj.start
 
         # prepare args
-        args = ["x-terminal-emulator", "-e",
-                hyx_path, "-offset", hex(offset), "-socket", self._socketname, filepath]
+        args=[hyx_path, "-offset", hex(offset), "-socket", self._socketname, filepath]
 
-        print(argsStr(args))  # incase spawning new window isnt possible
-        self.hyxprocess = Popen(args)
+        if runargs:
+            args = runargs + args
+            self.hyxprocess = Popen(args)
+        else:
+            pref = ["gdb -ex \"b updater.c:getUpdates_fromPaula_insert\"  --args"]
+            print(argsStr(pref+args))  # incase spawning new window isnt possible
+
         self.rootsock.listen(1)
         self.hyxsock, _ = self.rootsock.accept()
 
@@ -68,6 +71,21 @@ class HyxTalker():
 
         return self.hyxsock.send(code)
 
+    def sendNewHeap(self, oldstart, oldstop):
+        if self.heap.start != oldstart:
+            raise NotImplementedError
+        if self.heap.stop < oldstop:
+            raise NotImplementedError
+
+        # replace old heap with new heap
+
+        self.hyxsock.send(UPD_FROMPAULA_INSERT)
+        length = self.heap.stop - self.heap.start
+        self.hyxsock.send(pack("<Q", length))
+        ret=self.hyxsock.send(self.heap.heapbytes)
+        print("sent %#x bytes" % ret )
+        print("heapbytes len= %x" % len(self.heap.heapbytes))
+
     def getUpdate(self, isNextByte=False):
         sock = self.hyxsock
         if not isNextByte:
@@ -88,16 +106,17 @@ class HyxTalker():
 
     def updateHyx(self):
 
-        change = self.heap.checkChange()
+        changetype, changeret = self.heap.checkChange()
 
-        if change == "same":
+        if changetype == "same":
             # print("no change detected")
             pass
-        elif change == "length":
-            self.destroy()
-            self.launchHyx(self.heap)
-        elif isinstance(change, list):
-            self.sendUpdates(change)
+        elif changetype == "length":
+            self.sendNewHeap(*changeret)
+
+        elif changetype == "bytes":
+            self.sendUpdates(changeret)
+
         else:
             raise NotImplementedError
 

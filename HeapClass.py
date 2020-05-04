@@ -25,14 +25,10 @@ class Heap:
         self.checkChange()
 
     def getStartStop(self):
-        def extractAddresses(line):  # extracts the start/end out of the found line
-            start, end = findall(r"\b[0-9A-Fa-f]+\b", line)[:2]
-            return int(start, 16), int(end, 16)
-
         heapmap= getMappings(self.pid, "heap")
         assert len(heapmap) == 1
         info= heapmap[0]
-        print("start stop=", info.start,info.end)
+        print("start %#x stop %#x" % ( info.start,info.end))
         return info.start, info.end
 
 
@@ -79,14 +75,22 @@ class Heap:
                 self.hash = newhash
                 tuplelist = findChanges()
                 self.heapbytes = buf
-                return tuplelist
+                return "bytes", tuplelist
             else:
-                return "same"
+                return "same", 0
 
         else:
+            ret= self.start, self.stop
             self.start = newstart
             self.stop = newstop
-            return "length"
+
+            with open("/proc/%d/mem" % self.pid, "rb") as mem:
+                mem.seek(self.start)
+                self.heapbytes = bytearray(self.stop - self.start)
+                assert self.stop - self.start == mem.readinto(self.heapbytes)
+            self.hash = hashlib.sha3_224(self.heapbytes).digest()
+
+            return "length", ret
 
     def readHeap(self):
         with  open("/proc/%d/mem" % self.pid, "rb") as mem:

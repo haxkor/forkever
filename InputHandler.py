@@ -146,7 +146,7 @@ class InputHandler:
         check = hyxtalker.hyxsock.recv(1)
         if check == cons.CMD_REQUEST:
             cmd=hyxtalker.recvCommand()
-            print("%s\t (hyx)     " % cmd)
+            print("%s   (hyx) " % cmd)
             result=self.execute(cmd)
             print(result)
             hyxtalker.sendCommandResponse(result)
@@ -165,7 +165,6 @@ class InputHandler:
     def delete_hyx(self):
         self.hyxTalker.destroy(rootsock=True)
         self.hyxTalker=None
-        self.inputPoll.unregister("hyx")
 
 
 
