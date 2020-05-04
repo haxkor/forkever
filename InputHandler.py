@@ -3,7 +3,7 @@ from ProcessManager import ProcessManager
 from utilsFolder.PollableQueue import PollableQueue
 
 from threading import Thread
-from utilsFolder.InputReader import mainReader
+from utilsFolder.InputReader import InputReader
 
 from ProcessWrapper import ProcessWrapper
 from HyxTalker import HyxTalker
@@ -12,13 +12,13 @@ from utilsFolder.Parsing import parseInteger
 
 class InputHandler:
 
-    def __init__(self, path_to_hack):
+    def __init__(self, path_to_hack, startupfile=None):
         self.inputPoll = PaulaPoll()
         self.manager = ProcessManager(path_to_hack, "/tmp/paulasock", self.inputPoll)
 
         self.stdinQ = PollableQueue()
         self.inputPoll.register(self.stdinQ.fileno(), "userinput")
-        self.reader_thread = Thread(target=mainReader, args=(self.stdinQ,), daemon=True)
+        self.reader_thread = InputReader(self.stdinQ, startupfile)    #Thread(target=mainReader, args=(self.stdinQ,), daemon=True)
         self.reader_thread.start()
 
         self.hyxTalker = None
