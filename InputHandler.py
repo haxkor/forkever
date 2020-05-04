@@ -1,6 +1,7 @@
 from utilsFolder.PaulaPoll import PaulaPoll
 from ProcessManager import ProcessManager
 from utilsFolder.PollableQueue import PollableQueue
+from signal import SIGWINCH
 
 from threading import Thread
 from utilsFolder.InputReader import InputReader
@@ -118,11 +119,9 @@ class InputHandler:
     # this is called when a new line has been put to the stdinQ
     def handle_stdin(self, fd, event):
         cmd = self.stdinQ.get()[:-1]  # remove newline
-        print(cmd)
         assert isinstance(cmd, str)
-        import signal
 
-        if event == signal.SIGWINCH:
+        if event == SIGWINCH:
             return
         print(self.execute(cmd))
 

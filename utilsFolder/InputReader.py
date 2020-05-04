@@ -2,13 +2,12 @@ from utilsFolder.PollableQueue import PollableQueue
 from sys import stdin
 from threading import Thread
 
-# this will be run in a seperate thread
 class InputReader(Thread):
     def __init__(self,stdinQ:PollableQueue, startupfile=None):
+        Thread.__init__(self, daemon=True)
         self.stdinQ=stdinQ
         if startupfile:
             self.startup(startupfile)
-        Thread.__init__(self)
 
 
     def startup(self,file):
@@ -17,8 +16,12 @@ class InputReader(Thread):
                 self.stdinQ.put(line)
 
     def run(self):
-        for line in iter(stdin.readline, b""):
-            #determine result(line)
+        lastcmd=""
+        for line in iter(stdin.readline, ""):
+            if line == b"\n":
+                line=lastcmd
+            else:
+                lastcmd=line
             self.stdinQ.put(line.decode())
 
 
