@@ -11,9 +11,11 @@ class InputReader(Thread):
 
 
     def startup(self,file):
+        print("in startup")
         with open(file,"r") as f:
             for line in f.readlines():
                 self.stdinQ.put(line)
+                print("put %s" % line)
 
     def run(self):
         lastcmd=""

@@ -106,8 +106,13 @@ class InputHandler:
                     self.handle_stderr(event)
 
             else:  # this happens when two sockets are written to at the "same" time
+                for name,pollfd,event in pollresult:
+                    if "-out" in name:
+                        self.handle_procout(name, pollfd, event)
+                        break
+
                 print(pollresult)
-                raise NotImplementedError
+                #raise NotImplementedError
 
             if self.hyxTalker:
                 self.hyxTalker.updateHyx()

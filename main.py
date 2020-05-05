@@ -1,6 +1,8 @@
 from argparse import ArgumentParser
 from ptrace.tools import locateProgram
 from InputHandler import InputHandler
+from os import kill
+from signal import SIGKILL
 
 
 parser=ArgumentParser()
@@ -17,6 +19,8 @@ handler= InputHandler(abspath, startupfile=args.init)
 try:
     handler.inputLoop()
 except KeyboardInterrupt:
+    for proc in handler.manager.processList:
+        proc.ptraceProcess.kill(SIGKILL)
     exit(1)
 
 
