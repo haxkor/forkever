@@ -51,13 +51,16 @@ class ProcessManager:
         return self.currentProcess
 
     def free(self, pointer):
+        return self.callFunction("free", pointer)
+
+    def callFunction(self, funcname, *args, tillResult=False):
         try:
-            return self.getCurrentProcess().free(pointer)
+            return self.getCurrentProcess().callFunction(funcname,*args, tillResult=tillResult)
         except ProcessEvent as event:
             self.handle_ProcessEvent(event)
 
     def malloc(self, val):
-        return self.getCurrentProcess().malloc(val)
+        return self.callFunction("malloc",val)
 
     def tryFunction(self, funcname, args):
         args = list(int(arg, 16) for arg in args)

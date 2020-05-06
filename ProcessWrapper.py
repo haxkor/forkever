@@ -16,28 +16,32 @@ from Constants import RELATIVE_ADRESS_THRESHOLD, PRINT_BORING_SYSCALLS
 from utilsFolder.MapsReader import getMappings
 
 
-
-
-
 class ProgramInfo:
 
-    def __init__(self, path_to_hack:str, pid:int):
+    def __init__(self, path_to_hack: str, pid: int):
         self.elf = pwn.ELF(path_to_hack)
-        self.pid=pid
+        self.pid = pid
 
     def getAddrOf(self, symbol):
-        try:
-            return self.elf.symbols[symbol]
-        except KeyError:
-            return None
+        find_cands = lambda x: symbol in x
+        candidates = list(filter(find_cands, self.elf.symbols.keys()))
+        if len(candidates) == 0:
+            print("symbol not found")
+        else:
+            final_cand = sorted(candidates, key=len)[0]
+            if len(candidates) > 1:
+                print("chose %s out of %s" % (final_cand, candidates))
+
+            return self.elf.symbols[candidates[0]]
 
     def getBaseImageStart(self):
-        mappings= getMappings(self.pid, self.elf.path)
+        mappings = getMappings(self.pid, self.elf.path)
 
-        keyfunc= lambda mapping: mapping.start
-        start= min(mappings, key=keyfunc)
+        keyfunc = lambda mapping: mapping.start
+        start = min(mappings, key=keyfunc)
         print("getBaseImageStart = %#x" % start)
         return start
+
 
 class ProcessWrapper:
     """Provides an easy way to redirect stdout and stderr using pipes. Write to the processes STDIN and read from STDOUT at any time! """
@@ -49,12 +53,11 @@ class ProcessWrapper:
             write_argname=True,
             write_address=True,
         )
-        self.stdinRequested= False
-        self.remember_insert_bp=False
-        self.atBreakpoint=False
-        self.inserted_function_data=False
-        self.parent=None
-
+        self.stdinRequested = False
+        self.remember_insert_bp = False
+        self.atBreakpoint = False
+        self.inserted_function_data = False
+        self.parent = None
 
         if args:
             assert debugger is not None
@@ -83,12 +86,12 @@ class ProcessWrapper:
 
             self.heap = None  # Heap(self.ptraceProcess.pid)
 
-            self.programinfo= ProgramInfo(args[1], self.getPid())
+            self.programinfo = ProgramInfo(args[1], self.getPid())
 
         # this is used when a process is forked by user
         else:
             assert isinstance(parent, ProcessWrapper) and isinstance(ptraceprocess, PtraceProcess)
-            self.parent= parent
+            self.parent = parent
             self.in_pipe = parent.in_pipe  # TODO
             self.out_pipe = parent.out_pipe
             self.err_pipe = parent.err_pipe
@@ -101,24 +104,22 @@ class ProcessWrapper:
             self.ptraceProcess = ptraceprocess
             self.copyBreakpoints()
 
-            self.heap=None
-            self.programinfo=parent.programinfo
+            self.heap = None
+            self.programinfo = parent.programinfo
 
     def copyBreakpoints(self):
         from ptrace.debugger.process import Breakpoint
         for bp in self.parent.ptraceProcess.breakpoints.values():
-            assert isinstance(bp,Breakpoint)
-            new_bp= self.ptraceProcess.createBreakpoint(bp.address)
-            new_bp.old_bytes= bp.old_bytes
-
+            assert isinstance(bp, Breakpoint)
+            new_bp = self.ptraceProcess.createBreakpoint(bp.address)
+            new_bp.old_bytes = bp.old_bytes
 
     def getHeap(self):
         if self.heap is None:
-            self.heap= Heap(self.ptraceProcess.pid)
+            self.heap = Heap(self.ptraceProcess.pid)
             return self.heap
         else:
             return self.heap
-
 
     def setupPtraceProcess(self) -> PtraceProcess:
         from ptrace.debugger.debugger import PtraceDebugger
@@ -153,8 +154,8 @@ class ProcessWrapper:
     def readMappings(self):
         return self.ptraceProcess.readMappings()
 
-    def getPieAdress(self,reload=False):
-        maps= self.readMappings()
+    def getPieAdress(self, reload=False):
+        maps = self.readMappings()
 
     def writeToBuf(self, text):
         """write to the processes stdin buffer, awaiting read syscall"""
@@ -195,12 +196,13 @@ class ProcessWrapper:
         if self.heap is None:
             self.heap = Heap(self)
 
-
     def forkProcess(self):
         """ forks the process. If the process just syscalled (and is trapped in the syscall entry),
             the forked child starts just before that syscall."""
+
         def printregs(s, proc):
-            print(s,"ip= %#x\trax=%#x\torig_rax=%#x" % (proc.getInstrPointer(),proc.getreg("rax"),proc.getreg("orig_rax")))
+            print(s, "ip= %#x\trax=%#x\torig_rax=%#x" % (
+            proc.getInstrPointer(), proc.getreg("rax"), proc.getreg("orig_rax")))
 
         process = self.ptraceProcess
         ip = process.getInstrPointer()  # save state
@@ -209,11 +211,12 @@ class ProcessWrapper:
         at_syscall_entry = process.syscall_state.next_event == "exit"  # if process is about to syscall, dont inject
 
         if at_syscall_entry:  # user wants to fork just before a syscall
-            assert process.getreg("rax") == 0xffFFffFFffFFffda  # rax == -ENOSYS means we are most likely about to enter a syscall
+            assert process.getreg(
+                "rax") == 0xffFFffFFffFFffda  # rax == -ENOSYS means we are most likely about to enter a syscall
             process.setreg("orig_rax", 57)
         else:
             original = process.readBytes(ip, len(inject))
-            process.setreg("rax",57)    # fork code
+            process.setreg("rax", 57)  # fork code
             process.writeBytes(ip, inject)
 
         process.singleStep()  # continue till fork happended
@@ -236,14 +239,14 @@ class ProcessWrapper:
             # we just returned from our "inserted" fork syscall
             # now we need to restore the original state, meaning our
             # parent has to enter a syscall again. After that, restore registers
-            ip= process.getInstrPointer()
-            process.setInstrPointer( ip - 2)
+            ip = process.getInstrPointer()
+            process.setInstrPointer(ip - 2)
 
             process.syscall()
             process.waitSyscall()
             process.setregs(regs)
 
-            orig_rax = process.getreg("orig_rax")   # child will enter syscall when user continues
+            orig_rax = process.getreg("orig_rax")  # child will enter syscall when user continues
             child.setreg("rax", orig_rax)
             child.setInstrPointer(ip - 2)
         else:
@@ -252,13 +255,11 @@ class ProcessWrapper:
 
         return ProcessWrapper(parent=self, ptraceprocess=child)
 
-
-    def insertBreakpoint(self, adress,force_absolute=False):
+    def insertBreakpoint(self, adress, force_absolute=False):
         if not force_absolute and self.programinfo.elf.pie and adress <= RELATIVE_ADRESS_THRESHOLD:
             adress += self.programinfo.getBaseImageStart()
 
         return self.ptraceProcess.createBreakpoint(adress)
-
 
     def reinstertBreakpoint(self):
         """makes sure that breakpoints are reinserted"""
@@ -273,14 +274,14 @@ class ProcessWrapper:
 
     def _reinstertBreakpoint(self):
         """ this is the actual insertion of the breakpoint"""
-        ip= self.remember_insert_bp
+        ip = self.remember_insert_bp
         proc = self.ptraceProcess
         self.remember_insert_bp = False
         proc.singleStep()
-        event= proc.waitEvent()
+        event = proc.waitEvent()
 
         proc.createBreakpoint(ip)
-        assert isinstance(event,ProcessSignal)
+        assert isinstance(event, ProcessSignal)
         return event
 
     def removeBreakpoint(self, address):
@@ -292,10 +293,9 @@ class ProcessWrapper:
             proc.removeBreakpoint(bp)
             print("breakpoint removed")
 
-    def tryFunction(self,funcname,*args):
-        clone= self.forkProcess()
+    def tryFunction(self, funcname, *args):
+        clone = self.forkProcess()
         clone.callFunction(funcname, *args)
-
 
     def callFunction(self, funcname, *args, tillResult=False):
         """ immediately calls a desired function by overwriting code that is about to be executed.
@@ -335,9 +335,8 @@ class ProcessWrapper:
 
         self.inserted_function_data = (ip, finish, oldbytes, oldregs, funcname)
 
-        res= self.cont()
+        res = self.cont()
         return "none" if res is None else res
-
 
     def _afterCallFunction(self):
         proc = self.ptraceProcess
@@ -352,7 +351,7 @@ class ProcessWrapper:
     def malloc(self, n):
         return self.callFunction("plt.malloc", n)
 
-    def free(self,pointer,force=False):
+    def free(self, pointer, force=False):
         return self.callFunction("plt.free", pointer)
 
     def singlestep(self):
@@ -364,7 +363,7 @@ class ProcessWrapper:
 
         self.syscallsToTrace = ["read", "write", "fork"]
 
-        event = self.getNextEvent(signum,singlestep)
+        event = self.getNextEvent(signum, singlestep)
         if isinstance(event, str):  # happens if an interesting syscall is hit
             return event
 
@@ -375,7 +374,7 @@ class ProcessWrapper:
                 if self.inserted_function_data and self.inserted_function_data[1] == ip:
                     return self._afterCallFunction()
 
-                elif ip - 1 in proc.breakpoints.keys():   # did we hit a breakpoint?
+                elif ip - 1 in proc.breakpoints.keys():  # did we hit a breakpoint?
                     self.reinstertBreakpoint()
                     return "hit breakpoint at %#x" % (ip - 1)
 
@@ -387,22 +386,23 @@ class ProcessWrapper:
                     raise NotImplementedError
             else:
                 print("got %s, sending it back and continuing" % event)
-                return self.cont(event.signum,singlestep)
+                return self.cont(event.signum, singlestep)
 
                 raise NotImplementedError
         else:
             print(event, type(event))
-            if isinstance(event,ProcessExit):
+            if isinstance(event, ProcessExit):
                 print("raising event")
                 raise event
 
             raise NotImplementedError
 
-#
-#
+    #
+    #
     def getNextEvent(self, signum=0, singlestep=False):
         """ continues execution until an interesing syscall is entered/exited or
             some other event (hopyfully breakpoint sigtrap) happens"""
+
         def isSysTrap(event):
             return isinstance(event, ProcessSignal) and event.signum == 0x80 | SIGTRAP
 
@@ -433,16 +433,16 @@ class ProcessWrapper:
         # if we are continuing from a breakpoint, singlestep over the breakpoint and reinsert it.
         # if we are not singlestepping and did not hit a syscall / exceptional event, continue till next syscall
         if self.remember_insert_bp:
-            event=self._reinstertBreakpoint()
+            event = self._reinstertBreakpoint()
             if not singlestep and isTrap(event):
                 proc.syscall()
-                event=proc.waitEvent()
+                event = proc.waitEvent()
         else:
             if singlestep:
                 proc.singleStep(signum)
             else:
                 proc.syscall(signum)
-            event= proc.waitEvent()
+            event = proc.waitEvent()
 
         if not isSysTrap(event):
             return event
@@ -472,8 +472,6 @@ class ProcessWrapper:
                 return "%s = %s" % (syscall.name, syscall.result_text)
             else:  # about to call
                 return "process is about to syscall %s" % syscall.format()
-
-
 
 
 inject = pwn.asm("syscall", arch="amd64")
