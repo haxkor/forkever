@@ -224,8 +224,6 @@ class ProcessWrapper:
         process.syscall()  # exit syscall
         process.waitSyscall()
 
-        printregs("finishing sysc", process)
-
         # restore state in parent and child process
         child = process.debugger.list[-1]
         assert child.getreg("rax") == 0  # successfull fork
@@ -360,6 +358,7 @@ class ProcessWrapper:
         return self.cont(singlestep=True)
 
     def cont(self, singlestep=False):
+
         proc = self.ptraceProcess
 
         self.syscallsToTrace = ["read", "write", "fork"]

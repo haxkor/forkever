@@ -33,6 +33,7 @@ class HyxTalker():
 
 
     def launchHyx(self, heapobj: Heap):
+        """ open new Hyx Window"""
         def argsStr(args):
             return "".join(arg + " " for arg in args)
 
@@ -87,6 +88,7 @@ class HyxTalker():
         print("heapbytes len= %x" % len(self.heap.heapbytes))
 
     def getUpdate(self, isNextByte=False):
+        """receive the changes made in Hyx and write them to Memory"""
         sock = self.hyxsock
         if not isNextByte:
             pos = unpack("<Q", sock.recv(SZ_SIZET))[0]
@@ -105,6 +107,7 @@ class HyxTalker():
         return pos, data
 
     def updateHyx(self):
+        """checks if the heap has changed. If yes, forward the changes to Hyx"""
 
         changetype, changeret = self.heap.checkChange()
 
@@ -121,6 +124,7 @@ class HyxTalker():
             raise NotImplementedError
 
     def recvCommand(self):
+        """receive a :!command from Hyx"""
         cmd = bytearray(0x100)
         assert self.hyxsock.recv_into(cmd) == 0x100
         replace = cmd.find(b"\x00")

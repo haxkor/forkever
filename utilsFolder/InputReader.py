@@ -9,6 +9,8 @@ class InputReader(Thread):
         if startupfile:
             self.startup(startupfile)
 
+        self.start()
+
 
     def startup(self,file):
         print("in startup")

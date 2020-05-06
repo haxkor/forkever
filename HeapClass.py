@@ -25,18 +25,16 @@ class Heap:
         self.checkChange()
 
     def getStartStop(self):
-        heapmap= getMappings(self.pid, "heap")
+        heapmap = getMappings(self.pid, "heap")
         assert len(heapmap) == 1
-        info= heapmap[0]
-        print("start %#x stop %#x" % ( info.start,info.end))
+        info = heapmap[0]
+        print("start %#x stop %#x" % (info.start, info.end))
         return info.start, info.end
 
-
-
-
     def checkChange(self):
-        """checks if the heap changed. if some bytes changed, return the tuplelist indicating the changes.
-            if the size of the heap changed, return that (does not change the bytearray)"""  # TODO make this an iterator
+        """ check memory for change and save them.
+            returns what changed so Hyxtalker can send updates to Hyx
+        """
 
         def findChanges():
             from itertools import count
@@ -55,10 +53,8 @@ class Heap:
                 else:
                     length += 1
 
-            if self.heapbytes[-1] != buf[-1]:
+            if self.heapbytes[-1] != buf[-1]:   # edge case for very last byte in heap
                 data = buf[start:start + length]
-                if length == 1:  # if data is a single byte, python converts it to an int
-                    data = bytes([data])
                 result.append((start, data))
             return result
 
@@ -70,7 +66,7 @@ class Heap:
                 buf = bytearray(self.stop - self.start)
                 assert self.stop - self.start == mem.readinto(buf)
             newhash = hashlib.sha3_224(buf).digest()
-            # print("hash= %s" % newhash)
+
             if newhash != self.hash:
                 self.hash = newhash
                 tuplelist = findChanges()
@@ -80,7 +76,7 @@ class Heap:
                 return "same", 0
 
         else:
-            ret= self.start, self.stop
+            ret = self.start, self.stop
             self.start = newstart
             self.stop = newstop
 
