@@ -16,7 +16,8 @@ handler= InputHandler(abspath, startupfile=args.init)
 
 try:
     handler.inputLoop()
-except KeyboardInterrupt:
+except Exception:
+
     for proc in handler.manager.processList:
         proc.ptraceProcess.kill(SIGKILL)
     exit(1)

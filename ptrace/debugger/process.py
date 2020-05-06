@@ -471,10 +471,12 @@ class PtraceProcess(object):
         setattr(regs, name, value)
         self.setregs(regs)
 
-    def singleStep(self):
+    def singleStep(self, signum=0):
         if not HAS_PTRACE_SINGLESTEP:
             self.notImplementedError()
-        ptrace_singlestep(self.pid)
+
+        signum = self.filterSignal(signum)
+        ptrace_singlestep(self.pid, signum)
 
     def filterSignal(self, signum):
         if signum == SIGTRAP:

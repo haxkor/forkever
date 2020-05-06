@@ -1,4 +1,5 @@
 from ProcessWrapper import ProcessWrapper
+from ptrace.debugger.process_event import ProcessEvent, ProcessExit
 
 from ptrace.debugger import PtraceDebugger
 
@@ -50,7 +51,10 @@ class ProcessManager:
         return self.currentProcess
 
     def free(self, pointer):
-        return self.getCurrentProcess().free(pointer)
+        try:
+            return self.getCurrentProcess().free(pointer)
+        except ProcessEvent as event:
+            self.handle_ProcessEvent(event)
 
     def malloc(self, val):
         return self.getCurrentProcess().malloc(val)
@@ -67,13 +71,41 @@ class ProcessManager:
     def addBreakpoint(self, adress, force_absolute=False):
         return self.getCurrentProcess().insertBreakpoint(adress, force_absolute=force_absolute)
 
+    def handle_ProcessEvent(self,event):
+        def handle_Exit():
+            procWrap=self.getCurrentProcess()
+            print(event, "procManag\n")
+            if procWrap.parent:
+                self.switchProcess(procWrap.parent.getPid())
+                self.processList.remove(procWrap)
+                del procWrap
+            else:
+                if len(self.processList)>1:
+                    self.processList.remove(procWrap)
+                    del procWrap
+                    self.switchProcess()
+                else:
+                    print("all processes exited")
+                    exit(1)
+
+        if isinstance(event,ProcessExit):
+            return handle_Exit()
+
+        else:
+            raise NotImplementedError
+
     def cont(self,singlestep=False):
-        return self.getCurrentProcess().cont(singlestep=singlestep)
+        procWrap=self.getCurrentProcess()
+        try:
+            return procWrap.cont(singlestep=singlestep)
+        except ProcessEvent as event:
+            self.handle_ProcessEvent(event)
 
     def switchProcess(self, pid=None):
         processList = self.processList
         if len(processList) == 1:
             print("there is just one process")
+            self.currentProcess=processList[0]
             return
 
         if pid:

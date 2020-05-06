@@ -1,7 +1,7 @@
 from utilsFolder.PaulaPipe import Pipe
 
 from ptrace.debugger.process import PtraceProcess
-from ptrace.debugger.process_event import ProcessExecution
+from ptrace.debugger.process_event import ProcessExecution, ProcessExit
 import pwn
 from subprocess import Popen
 from utilsFolder.utils import path_launcher
@@ -53,6 +53,7 @@ class ProcessWrapper:
         self.remember_insert_bp=False
         self.atBreakpoint=False
         self.inserted_function_data=False
+        self.parent=None
 
 
         if args:
@@ -357,13 +358,13 @@ class ProcessWrapper:
     def singlestep(self):
         return self.cont(singlestep=True)
 
-    def cont(self, singlestep=False):
+    def cont(self, signum=0, singlestep=False):
 
         proc = self.ptraceProcess
 
         self.syscallsToTrace = ["read", "write", "fork"]
 
-        event = self.getNextEvent(singlestep=singlestep)
+        event = self.getNextEvent(signum,singlestep)
         if isinstance(event, str):  # happens if an interesting syscall is hit
             return event
 
@@ -385,12 +386,21 @@ class ProcessWrapper:
                     print(event)
                     raise NotImplementedError
             else:
-                print(event)
+                print("got %s, sending it back and continuing" % event)
+                return self.cont(event.signum,singlestep)
+
                 raise NotImplementedError
         else:
+            print(event, type(event))
+            if isinstance(event,ProcessExit):
+                print("raising event")
+                raise event
+
             raise NotImplementedError
 
-    def getNextEvent(self, singlestep=False):
+#
+#
+    def getNextEvent(self, signum=0, singlestep=False):
         """ continues execution until an interesing syscall is entered/exited or
             some other event (hopyfully breakpoint sigtrap) happens"""
         def isSysTrap(event):
@@ -429,9 +439,9 @@ class ProcessWrapper:
                 event=proc.waitEvent()
         else:
             if singlestep:
-                proc.singleStep()
+                proc.singleStep(signum)
             else:
-                proc.syscall()
+                proc.syscall(signum)
             event= proc.waitEvent()
 
         if not isSysTrap(event):

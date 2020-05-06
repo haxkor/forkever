@@ -284,8 +284,8 @@ if RUNNING_LINUX:
         ptrace(PTRACE_SETREGS, pid, 0, addressof(regs))
 
     if HAS_PTRACE_SINGLESTEP:
-        def ptrace_singlestep(pid):
-            ptrace(PTRACE_SINGLESTEP, pid)
+        def ptrace_singlestep(pid, signum=0):
+            ptrace(PTRACE_SINGLESTEP, pid, 0, signum)
 
 else:
     def ptrace_syscall(pid, signum=0):
