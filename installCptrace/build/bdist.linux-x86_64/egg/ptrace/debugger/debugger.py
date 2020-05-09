@@ -1,4 +1,4 @@
-from logging import info, warning, error
+from logging2 import info, warning, error
 from ptrace import PtraceError
 from os import waitpid, WNOHANG
 from signal import SIGTRAP, SIGSTOP

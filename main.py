@@ -1,8 +1,18 @@
+
+import pwn
+pwn.context.log_level="ERROR"
+
+from Constants import logfile
 from argparse import ArgumentParser
 from ptrace.tools import locateProgram
 from InputHandler import InputHandler
 from os import kill
 from signal import SIGKILL
+
+from contextlib import redirect_stdout
+
+print(pwn.log)
+
 
 parser=ArgumentParser()
 parser.add_argument("program")

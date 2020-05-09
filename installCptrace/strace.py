@@ -8,7 +8,7 @@ from ptrace.syscall import (SYSCALL_NAMES, SYSCALL_PROTOTYPES,
 from ptrace.func_call import FunctionCallOptions
 from sys import stderr, exit
 from optparse import OptionParser
-from logging import getLogger, error
+from logging2 import getLogger, error
 from ptrace.error import PTRACE_ERRORS, writeError
 from ptrace.ctypes_tools import formatAddress
 import re

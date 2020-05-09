@@ -5,7 +5,6 @@ from ptrace.debugger import PtraceDebugger
 
 from ptrace.func_call import FunctionCallOptions
 
-import pwn
 from Constants import path_launcher
 
 hyx_path = "/"
@@ -34,6 +33,7 @@ class ProcessManager:
         self.processList.append(proc)
         self.pollobj.register(proc.out_pipe.fileno("read"), "proc-out")
         self.pollobj.register(proc.err_pipe.fileno("read"), "proc-err")
+        return proc
 
     def startDebugger(self, args):
 
@@ -69,7 +69,9 @@ class ProcessManager:
 
     def fork(self):
         procWrap = self.getCurrentProcess()
-        self.addProcess(procWrap.forkProcess())
+        child=self.addProcess(procWrap.forkProcess())
+        return self.switchProcess(child.getPid())
+
 
     def addBreakpoint(self, adress, force_absolute=False):
         return self.getCurrentProcess().insertBreakpoint(adress, force_absolute=force_absolute)
@@ -77,7 +79,6 @@ class ProcessManager:
     def handle_ProcessEvent(self,event):
         def handle_Exit():
             procWrap=self.getCurrentProcess()
-            print(event, "procManag\n")
             if procWrap.parent:
                 self.switchProcess(procWrap.parent.getPid())
                 self.processList.remove(procWrap)
@@ -107,25 +108,27 @@ class ProcessManager:
     def switchProcess(self, pid=None):
         processList = self.processList
         if len(processList) == 1:
-            print("there is just one process")
             self.currentProcess=processList[0]
-            return
+            return "there is only one process"
 
         if pid:
             proc = self.getCurrentProcess()
+            procIter = iter(processList)
             while proc.ptraceProcess.pid != pid:
                 try:
-                    proc = next(iter(processList))
+                    proc = next(procIter)
                 except StopIteration:
-                    print("no process with pid %d" % pid)
-                    return
+                    return "no process with pid %d" % pid
             self.currentProcess = proc
-            print("switched process")
+            return "switched to %d" % pid
         else:
             ind = processList.index(self.getCurrentProcess())
             nextproc = processList[(ind + 1) % len(processList)]
             self.currentProcess = nextproc
-            print("switched to next process, pid= %d" % nextproc.ptraceProcess.pid)
+            return "switched to %d" % nextproc.ptraceProcess.pid
+
+    def family(self):
+        return self.getCurrentProcess().getFamily()
 
     def write(self, text):
         procWrap = self.getCurrentProcess()

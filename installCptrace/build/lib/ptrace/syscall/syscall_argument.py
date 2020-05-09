@@ -3,7 +3,7 @@ from ptrace.ctypes_tools import uint2int, formatWordHex, formatAddress
 from ptrace.signames import signalName
 from ctypes import c_int
 from ptrace.error import PTRACE_ERRORS, writeError
-from logging import getLogger, INFO
+from logging2 import getLogger, INFO
 from ptrace.func_arg import FunctionArgument
 from ptrace.syscall.posix_arg import (
     formatMmapProt, formatAccessMode, formatOpenMode, formatCloneFlags, formatDirFd)

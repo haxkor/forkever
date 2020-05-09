@@ -1,6 +1,6 @@
 import ptrace.debugger.process as process
 import os
-import logging
+import logging2
 import pwn
 
 
@@ -28,9 +28,9 @@ def changeLogHandler():
     instead the logs will be written to a logfile
     """
     logfile = open(tmppath + "logfile", "w")
-    rootlog = logging.getLogger()
+    rootlog = logging2.getLogger()
     roothandlers = rootlog.handlers
-    lh1 = logging.StreamHandler(logfile)
+    lh1 = logging2.StreamHandler(logfile)
 
     rootlog.addHandler(lh1)
     rootlog.removeHandler(roothandlers[0])

@@ -6,7 +6,7 @@ from ptrace.debugger import (PtraceDebugger, Application,
 from optparse import OptionParser
 from os import getpid
 from sys import stdout, stderr, exit
-from logging import getLogger, info, warning, error
+from logging2 import getLogger, info, warning, error
 from ptrace.version import VERSION, WEBSITE
 from ptrace.error import PTRACE_ERRORS, writeError
 from ptrace.binding import HAS_PTRACE_SINGLESTEP

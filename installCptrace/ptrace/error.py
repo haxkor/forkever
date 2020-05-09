@@ -1,6 +1,6 @@
 from sys import exc_info
 from traceback import format_exception
-from logging import ERROR, getLogger
+from logging2 import ERROR, getLogger
 from ptrace.logging_tools import getLogFunc, changeLogLevel
 
 PTRACE_ERRORS = Exception

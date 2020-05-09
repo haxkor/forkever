@@ -16,6 +16,8 @@ RELATIVE_ADRESS_THRESHOLD = 0xFFffFFff
 
 PRINT_BORING_SYSCALLS = True
 
+logfile= open("logfile","w")
+
 
 from pwn import asm
 SYSCALL_INSTR= asm("syscall")

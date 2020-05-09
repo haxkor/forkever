@@ -1,6 +1,6 @@
 from ptrace.ctypes_tools import formatAddress
 from ptrace import PtraceError
-from logging import info
+from logging2 import info
 from weakref import ref
 from ptrace.cpu_info import CPU_POWERPC, CPU_WORD_SIZE
 from ptrace.ctypes_tools import word2bytes

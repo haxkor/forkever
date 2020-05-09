@@ -1,4 +1,4 @@
-from logging import error
+from logging2 import error
 from ptrace.disasm import HAS_DISASSEMBLER
 from signal import SIGFPE, SIGSEGV, SIGABRT
 try:

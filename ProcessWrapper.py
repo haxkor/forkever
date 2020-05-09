@@ -1,44 +1,57 @@
 from utilsFolder.PaulaPipe import Pipe
+from utilsFolder.tree import format_tree
 
 from ptrace.debugger.process import PtraceProcess
-from ptrace.debugger.process_event import ProcessExecution, ProcessExit
-import pwn
+from ptrace.debugger.process_event import ProcessExecution, ProcessEvent
 from subprocess import Popen
 from utilsFolder.utils import path_launcher
 from ptrace.debugger.ptrace_signal import ProcessSignal
 from signal import SIGTRAP
 
+
 from HeapClass import Heap
 
 from ptrace.func_call import FunctionCallOptions
-from Constants import RELATIVE_ADRESS_THRESHOLD, PRINT_BORING_SYSCALLS
+from Constants import RELATIVE_ADRESS_THRESHOLD, PRINT_BORING_SYSCALLS, logfile
+from contextlib import redirect_stdout
+
+import pwn
 
 from utilsFolder.MapsReader import getMappings
 
 
 class ProgramInfo:
 
+
     def __init__(self, path_to_hack: str, pid: int):
-        self.elf = pwn.ELF(path_to_hack)
+
+        self.elf = pwn.ELF(path_to_hack, False)
+
         self.pid = pid
+        self.base= self.getBaseImageStart()
 
     def getAddrOf(self, symbol):
+        pwn.context.log_console = logfile
         find_cands = lambda x: symbol in x
         candidates = list(filter(find_cands, self.elf.symbols.keys()))
+
         if len(candidates) == 0:
             print("symbol not found")
         else:
-            final_cand = sorted(candidates, key=len)[0]
+            candidates = sorted(candidates, key=len)[0]
             if len(candidates) > 1:
-                print("chose %s out of %s" % (final_cand, candidates))
+                print("chose %s out of %s" % (candidates[0], candidates))
 
-            return self.elf.symbols[candidates[0]]
+            return self.elf.symbols[candidates[0]] + self.base
 
     def getBaseImageStart(self):
+        if not self.elf.pie:
+            return 0
         mappings = getMappings(self.pid, self.elf.path)
 
         keyfunc = lambda mapping: mapping.start
-        start = min(mappings, key=keyfunc)
+        start = min(mappings, key=keyfunc).start
+
         print("getBaseImageStart = %#x" % start)
         return start
 
@@ -58,6 +71,7 @@ class ProcessWrapper:
         self.atBreakpoint = False
         self.inserted_function_data = False
         self.parent = None
+        self.children= []
 
         if args:
             assert debugger is not None
@@ -129,9 +143,11 @@ class ProcessWrapper:
         ptrace_proc.interrupt()  # seize does not automatically interrupt the process
         ptrace_proc.setoptions(self.debugger.options)
 
-        launcher_ELF = pwn.ELF(path_launcher)  # get ready to launch
+        print("launching")
+
+        launcher_ELF = pwn.ELF(path_launcher,False)  # get ready to launch
         ad = launcher_ELF.symbols["go"]
-        ptrace_proc.writeBytes(ad, b"gogo")
+        ptrace_proc.writeBytes(ad, b"x")
 
         ptrace_proc.cont()
         assert isinstance(ptrace_proc.waitEvent(), ProcessExecution)  # execve syscall is hit
@@ -221,16 +237,16 @@ class ProcessWrapper:
 
         process.singleStep()  # continue till fork happended
         event = process.waitEvent()
-        print("got event_stop", event, "pid=", process.pid)
+        #print("got event_stop", event, "pid=", process.pid)
         from ptrace.debugger.process_event import NewProcessEvent
         assert isinstance(event, NewProcessEvent)
 
-        process.syscall()  # exit syscall
+        process.syscall()  # exit fork syscall
         process.waitSyscall()
 
         # restore state in parent and child process
         child = process.debugger.list[-1]
-        assert child.getreg("rax") == 0  # successfull fork
+        assert child.getreg("rax") == 0  # successful fork
 
         process.setregs(regs)
         child.setregs(regs)
@@ -253,7 +269,19 @@ class ProcessWrapper:
             process.writeBytes(ip, original)
             child.writeBytes(ip, original)
 
-        return ProcessWrapper(parent=self, ptraceprocess=child)
+        child= ProcessWrapper(parent=self, ptraceprocess=child)
+        self.children.append(child)
+        return child
+
+    def getFamily(self):
+        def getRepr(procWrap:ProcessWrapper):
+            return str(procWrap.getPid())
+
+        def getChildren(procWrap:ProcessWrapper):
+            return procWrap.children
+
+        return format_tree(self, getRepr, getChildren)
+
 
     def insertBreakpoint(self, adress, force_absolute=False):
         if not force_absolute and self.programinfo.elf.pie and adress <= RELATIVE_ADRESS_THRESHOLD:
@@ -388,11 +416,9 @@ class ProcessWrapper:
                 print("got %s, sending it back and continuing" % event)
                 return self.cont(event.signum, singlestep)
 
-                raise NotImplementedError
         else:
             print(event, type(event))
-            if isinstance(event, ProcessExit):
-                print("raising event")
+            if isinstance(event, ProcessEvent):
                 raise event
 
             raise NotImplementedError
@@ -474,4 +500,5 @@ class ProcessWrapper:
                 return "process is about to syscall %s" % syscall.format()
 
 
-inject = pwn.asm("syscall", arch="amd64")
+with redirect_stdout(logfile):
+    inject = pwn.asm("syscall", arch="amd64")

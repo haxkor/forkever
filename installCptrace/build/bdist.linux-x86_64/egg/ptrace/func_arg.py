@@ -1,5 +1,5 @@
 from ptrace.error import PTRACE_ERRORS, writeError
-from logging import getLogger
+from logging2 import getLogger
 from ptrace.ctypes_tools import formatAddress
 
 

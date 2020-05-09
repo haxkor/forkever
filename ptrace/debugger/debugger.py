@@ -1,4 +1,5 @@
-from logging import info, warning, error
+from logging2 import info, warning, error
+
 from ptrace import PtraceError
 from os import waitpid, WNOHANG
 from signal import SIGTRAP, SIGSTOP
@@ -6,12 +7,14 @@ from errno import ECHILD
 from ptrace.debugger import PtraceProcess, ProcessSignal
 from ptrace.binding import HAS_PTRACE_EVENTS
 from time import sleep
+
 if HAS_PTRACE_EVENTS:
     from ptrace.binding.func import (
         PTRACE_O_TRACEFORK, PTRACE_O_TRACEVFORK,
         PTRACE_O_TRACEEXEC, PTRACE_O_TRACESYSGOOD,
         PTRACE_O_TRACECLONE, THREAD_TRACE_FLAGS,
         PTRACE_EVENT_STOP)
+
 
 class DebuggerError(PtraceError):
     pass
@@ -60,7 +63,7 @@ class PtraceDebugger(object):
     """
 
     def __init__(self):
-        self.dict = {}   # pid -> PtraceProcess object
+        self.dict = {}  # pid -> PtraceProcess object
         self.list = []
         self.options = 0
         self.trace_fork = False
@@ -84,7 +87,7 @@ class PtraceDebugger(object):
         self.list.append(process)
 
         try:
-            if not seize:   #seizing a process does not stop it
+            if not seize:  # seizing a process does not stop it
                 process.waitSignals(SIGTRAP, SIGSTOP, PTRACE_EVENT_STOP)
         except KeyboardInterrupt:
             error(
@@ -93,13 +96,12 @@ class PtraceDebugger(object):
                 % pid)
         except ProcessSignal as event:
             event.display()
-        except:   # noqa: E722
+        except:  # noqa: E722
             process.is_attached = False
             process.detach()
             raise
         # options cant be set when process is still running
         if HAS_PTRACE_EVENTS and self.options and not seize:
-            print("setting options")
             process.setoptions(self.options)
 
         return process

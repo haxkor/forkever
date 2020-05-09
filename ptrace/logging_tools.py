@@ -1,5 +1,5 @@
 from ptrace.tools import minmax
-from logging import ERROR, WARNING, INFO, DEBUG
+from logging2 import ERROR, WARNING, INFO, DEBUG
 
 
 def getLogFunc(logger, level):

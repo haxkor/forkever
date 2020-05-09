@@ -13,7 +13,7 @@ from ptrace.ctypes_tools import bytes2word, word2bytes, bytes2type, bytes2array
 from signal import SIGTRAP, SIGSTOP, SIGKILL
 from ptrace.ctypes_tools import formatAddress, formatWordHex
 from ctypes import sizeof, c_char_p
-from logging import info, warning, error
+from logging2 import info, warning, error
 from ptrace.error import PtraceError
 from errno import ESRCH, EACCES
 from ptrace.debugger import (Breakpoint,

@@ -60,7 +60,7 @@ class InputHandler:
         elif cmd.startswith("b"):
             _, _, adress = cmd.partition(" ")
             adress = parseInteger(adress, ptraceProc=proc)
-            result = manager.insertBreakpoint(adress)
+            result = manager.addBreakpoint(adress)
 
         elif cmd.startswith("malloc"):
             _, _, val = cmd.partition(" ")
@@ -80,6 +80,9 @@ class InputHandler:
 
         elif cmd.startswith("s"):
             result = manager.cont(singlestep=True)
+
+        elif cmd.startswith("fam"):
+            result = manager.family()
 
         return result
 

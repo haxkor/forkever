@@ -1,9 +1,9 @@
 from optparse import OptionGroup
-from logging import (getLogger, StreamHandler,
-                     DEBUG, INFO, WARNING, ERROR)
+from logging2 import (getLogger, StreamHandler,
+                      DEBUG, INFO, WARNING, ERROR)
 from sys import exit
 from ptrace import PtraceError
-from logging import error
+from logging2 import error
 from ptrace.tools import locateProgram
 from ptrace.debugger import ProcessExit, DebuggerError
 from errno import EPERM

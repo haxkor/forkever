@@ -20,7 +20,7 @@ class InputReader(Thread):
                 print("put %s" % line)
 
     def run(self):
-        lastcmd=""
+        lastcmd=b""
         for line in iter(stdin.readline, ""):
             if line == b"\n":
                 line=lastcmd
