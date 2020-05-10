@@ -55,12 +55,15 @@ class ProcessManager:
 
     def callFunction(self, funcname, *args, tillResult=False):
         try:
-            return self.getCurrentProcess().callFunction(funcname,*args, tillResult=tillResult)
+            return self.getCurrentProcess().callFunction(funcname, *args, tillResult=tillResult)
         except ProcessEvent as event:
             self.handle_ProcessEvent(event)
 
     def malloc(self, val):
-        return self.callFunction("malloc",val)
+        return self.callFunction("malloc", val)
+
+    def dumpMaps(self):
+        return "".join(str(mapping) + "\n" for mapping in self.getCurrentProcess().ptraceProcess.readMappings())
 
     def tryFunction(self, funcname, args):
         args = list(int(arg, 16) for arg in args)
@@ -69,22 +72,22 @@ class ProcessManager:
 
     def fork(self):
         procWrap = self.getCurrentProcess()
-        child=self.addProcess(procWrap.forkProcess())
+        child = self.addProcess(procWrap.forkProcess())
         return self.switchProcess(child.getPid())
 
+    def addBreakpoint(self, cmd):
+        _, _, cmd = cmd.partition(" ")
+        return self.getCurrentProcess().insertBreakpoint(cmd)
 
-    def addBreakpoint(self, adress, force_absolute=False):
-        return self.getCurrentProcess().insertBreakpoint(adress, force_absolute=force_absolute)
-
-    def handle_ProcessEvent(self,event):
+    def handle_ProcessEvent(self, event):
         def handle_Exit():
-            procWrap=self.getCurrentProcess()
+            procWrap = self.getCurrentProcess()
             if procWrap.parent:
                 self.switchProcess(procWrap.parent.getPid())
                 self.processList.remove(procWrap)
                 del procWrap
             else:
-                if len(self.processList)>1:
+                if len(self.processList) > 1:
                     self.processList.remove(procWrap)
                     del procWrap
                     self.switchProcess()
@@ -92,14 +95,14 @@ class ProcessManager:
                     print("all processes exited")
                     exit(1)
 
-        if isinstance(event,ProcessExit):
+        if isinstance(event, ProcessExit):
             return handle_Exit()
 
         else:
             raise NotImplementedError
 
-    def cont(self,singlestep=False):
-        procWrap=self.getCurrentProcess()
+    def cont(self, singlestep=False):
+        procWrap = self.getCurrentProcess()
         try:
             return procWrap.cont(singlestep=singlestep)
         except ProcessEvent as event:
@@ -108,7 +111,7 @@ class ProcessManager:
     def switchProcess(self, pid=None):
         processList = self.processList
         if len(processList) == 1:
-            self.currentProcess=processList[0]
+            self.currentProcess = processList[0]
             return "there is only one process"
 
         if pid:

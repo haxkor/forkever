@@ -58,9 +58,8 @@ class InputHandler:
             result = manager.switchProcess(pid=pid)
 
         elif cmd.startswith("b"):
-            _, _, adress = cmd.partition(" ")
-            adress = parseInteger(adress, ptraceProc=proc)
-            result = manager.addBreakpoint(adress)
+
+            result = manager.addBreakpoint(cmd)
 
         elif cmd.startswith("malloc"):
             _, _, val = cmd.partition(" ")
@@ -83,6 +82,9 @@ class InputHandler:
 
         elif cmd.startswith("fam"):
             result = manager.family()
+
+        elif cmd.startswith("maps"):
+            result= manager.dumpMaps()
 
         return result
 
@@ -193,13 +195,13 @@ class InputHandler:
 if __name__ == "__main__":
     from utilsFolder import utils
 
-    utils.changeLogHandler()
 
     # path_to_hack = "/home/jasper/university/barbeit/utilstest/cprograms/mallocinfgets"
     # path_to_hack= "/home/jasper/university/barbeit/syscalltrap/t2"
 
     # path_to_hack = "/home/jasper/university/barbeit/utilstest/infgets"
     path_to_hack = "/home/jasper/university/barbeit/dummy/a.out"
+    path_to_hack = "/home/jasper/university/barbeit/dummy/minimalloc"
 
     i = InputHandler(path_to_hack)
     i.inputLoop()

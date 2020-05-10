@@ -20,6 +20,9 @@ def warning(msg):
 def error(msg):
     logger.error(msg)
 
+def log(msg):
+    logger.log(msg)
+
 
 
 

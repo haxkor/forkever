@@ -63,7 +63,7 @@ class ProcessWrapper:
 
             self.heap = None  # Heap(self.ptraceProcess.pid)
 
-            self.programinfo = ProgramInfo(args[1], self.getPid())
+            self.programinfo = ProgramInfo(args[1], self.getPid(), self)
 
         # this is used when a process is forked by user
         else:
@@ -113,7 +113,8 @@ class ProcessWrapper:
         ptrace_proc.writeBytes(ad, b"x")
 
         ptrace_proc.cont()
-        assert isinstance(ptrace_proc.waitEvent(), ProcessExecution)  # execve syscall is hit
+        event= ptrace_proc.waitEvent()
+        assert isinstance(event, ProcessExecution), event  # execve syscall is hit
 
         ptrace_proc.syscall()
         ptrace_proc.waitSyscall()
@@ -245,9 +246,10 @@ class ProcessWrapper:
 
         return format_tree(self, getRepr, getChildren)
 
-    def insertBreakpoint(self, adress, force_absolute=False):
-        if adress <= RELATIVE_ADRESS_THRESHOLD:
-            adress += self.programinfo.elf.base
+    def insertBreakpoint(self, adress):
+        adress= self.programinfo.getAddrOf(adress)
+        if adress is None:
+            return
 
         return self.ptraceProcess.createBreakpoint(adress)
 
