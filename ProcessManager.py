@@ -73,7 +73,7 @@ class ProcessManager:
     def fork(self):
         procWrap = self.getCurrentProcess()
         child = self.addProcess(procWrap.forkProcess())
-        return self.switchProcess(child.getPid())
+        return self.switchProcess(str(child.getPid()))
 
     def addBreakpoint(self, cmd):
         _, _, cmd = cmd.partition(" ")
@@ -108,7 +108,25 @@ class ProcessManager:
         except ProcessEvent as event:
             self.handle_ProcessEvent(event)
 
-    def switchProcess(self, pid=None):
+    def switchProcess(self, cmd:str):
+        """ ? prints root family
+            up switches to parent
+            101 switches to given process"""
+        if "?" in cmd:
+            return self.processList[0].getFamily()
+
+        currProc= self.getCurrentProcess()
+        if "up" in cmd:
+            if not currProc.parent:
+                return "this is root"
+            pid=currProc.parent.getPid()
+        else:   # look for number
+            try:
+                pid=int(cmd)
+                assert pid in list(proc.getPid() for proc in self.processList)
+            except (ValueError, AssertionError):
+                return "process not found"
+
         processList = self.processList
         if len(processList) == 1:
             self.currentProcess = processList[0]

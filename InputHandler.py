@@ -50,12 +50,8 @@ class InputHandler:
             print(manager.processList)
 
         elif cmd.startswith("sw"):  # switch
-            _, _, pid = cmd.partition(" ")
-            if pid != "":
-                pid = int(pid)
-            else:
-                pid = None
-            result = manager.switchProcess(pid=pid)
+            _, _, cmd = cmd.partition(" ")
+            result = manager.switchProcess(cmd)
 
         elif cmd.startswith("b"):
 
