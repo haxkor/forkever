@@ -490,7 +490,7 @@ class ProcessWrapper:
         print(self.programinfo.where(proc.getreg("rip")))
 
     def examine(self, cmd):
-        size_modifiers = dict([("b", (1,"B")), ("h", (2,"H")), ("w", (4,"L")), ("g", (8,"Q"))])
+        size_modifiers = dict([("b", (1, "B")), ("h", (2, "H")), ("w", (4, "L")), ("g", (8, "Q"))])
         instr, _, cmd = cmd.partition(" ")
 
         # check if user specified some special formatting
@@ -502,54 +502,38 @@ class ProcessWrapper:
             if fmt not in size_modifiers.keys():
                 if fmt:
                     warning("fmt %s is not an option" % fmt)
-                fmt="w"
+                fmt = "w"
         else:
             count = 1
             fmt = "w"
 
-
-        size,unpack_fmt= size_modifiers[fmt]
+        size, unpack_fmt = size_modifiers[fmt]
         unpack_fmt = "<" + unpack_fmt
 
         try:
             address = parseInteger(cmd, self.ptraceProcess)
 
             # make sure adress is in virtual adress space
-            where_symbol, where_ad =self.programinfo.where(address)
+            where_symbol, where_ad = self.programinfo.where(address)
         except ValueError as e:
             return str(e)
 
         # read data from memory and print it accordingly
         symbol_delta = address - where_ad
-        bytesread= self.ptraceProcess.readBytes(address,size*count)
+        bytesread = self.ptraceProcess.readBytes(address, size * count)
 
-        newLineAfter= 16//size
-        line_pref= lambda offset: where_symbol + "+%#x" % (symbol_delta + offset)
-        result=""
+        newLineAfter = 16 // size
+        line_pref = lambda offset: where_symbol + "+%#x" % (symbol_delta + offset)
+        result = ""
 
-        format_str= "  %0" + "%d" % (size*2) + "x"
+        format_str = "  %0" + "%d" % (size * 2) + "x"
 
-        for i,value in enumerate(iter_unpack(unpack_fmt, bytesread)):
-            if i % newLineAfter ==0:
-                result+= "\n" + line_pref(i)
-            result+= format_str % value
+        for i, value in enumerate(iter_unpack(unpack_fmt, bytesread)):
+            if i % newLineAfter == 0:
+                result += "\n" + line_pref(i)
+            result += format_str % value
 
-        return result[1:]   # remove first newline
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        return result[1:]  # remove first newline
 
     def print(self, cmd: str):
         instr, _, cmd = cmd.partition(" ")
