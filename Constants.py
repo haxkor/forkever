@@ -18,6 +18,9 @@ PRINT_BORING_SYSCALLS = True
 
 logfile= open("logfile","w")
 
+from signal import SIGCHLD
+SIGNALS_IGNORE = dict([("SIGCHLD",SIGCHLD)])
+
 
 from pwn import asm
 SYSCALL_INSTR= asm("syscall")

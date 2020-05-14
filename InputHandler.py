@@ -67,6 +67,9 @@ class InputHandler:
             pointer = parseInteger(pointer, proc)
             result = manager.free(pointer)
 
+        elif cmd.startswith("fin"):
+            result=manager.finish()
+
         elif cmd.startswith("try"):
             result = manager.tryFunction(cmd.split(" ")[1], cmd.split(" ")[2:])
 
@@ -82,7 +85,8 @@ class InputHandler:
         elif cmd.startswith("maps"):
             result= manager.dumpMaps()
 
-        return result
+        return result if result else ""
+
 
     def inputLoop(self):
 

@@ -11,7 +11,8 @@ from signal import SIGTRAP
 from HeapClass import Heap
 
 from ptrace.func_call import FunctionCallOptions
-from Constants import RELATIVE_ADRESS_THRESHOLD, PRINT_BORING_SYSCALLS, logfile
+from Constants import (RELATIVE_ADRESS_THRESHOLD, PRINT_BORING_SYSCALLS, logfile,
+    SIGNALS_IGNORE)
 from contextlib import redirect_stdout
 
 import pwn
@@ -35,6 +36,7 @@ class ProcessWrapper:
         self.inserted_function_data = False
         self.parent = None
         self.children = []
+        self.is_terminated=False
 
         if args:
             assert debugger is not None
@@ -377,7 +379,11 @@ class ProcessWrapper:
                     print(event)
                     raise NotImplementedError
             else:
-                print("got %s, sending it back and continuing" % event)
+                if event.signum in SIGNALS_IGNORE.values():
+                    event.signum=0
+                else:
+                    print("got %s, sending it back and continuing" % event)
+
                 return self.cont(event.signum, singlestep)
 
         else:
@@ -463,6 +469,29 @@ class ProcessWrapper:
             else:  # about to call
                 return "process is about to syscall %s" % syscall.format()
 
+    def finish(self):
+        """ run until the current function is finished
+            detected by monitoring $rsp
+            might break with compiler-optimisations"""
+        proc=self.ptraceProcess
+        saved_rsp= proc.getreg("rsp")
+        rsp= saved_rsp
 
-with redirect_stdout(logfile):
-    inject = pwn.asm("syscall", arch="amd64")
+        while rsp <= saved_rsp:
+            self.cont(singlestep=True)
+            rsp= proc.getreg("rsp")
+
+        print("rsp = %#x" % proc.getreg("rsp"))
+        print("rip = %#x" % proc.getreg("rip"))
+        proc.getregs()
+
+
+    def examine(self,cmd):
+        pass
+
+
+
+
+
+
+inject = pwn.asm("syscall", arch="amd64")

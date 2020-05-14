@@ -6,6 +6,7 @@ from ptrace.debugger import PtraceDebugger
 from ptrace.func_call import FunctionCallOptions
 
 from Constants import path_launcher
+from signal import SIGCHLD
 
 hyx_path = "/"
 
@@ -81,16 +82,14 @@ class ProcessManager:
 
     def handle_ProcessEvent(self, event):
         def handle_Exit():
+
             procWrap = self.getCurrentProcess()
+            procWrap.is_terminated = True
             if procWrap.parent:
-                self.switchProcess(procWrap.parent.getPid())
-                self.processList.remove(procWrap)
-                del procWrap
+                return self.switchProcess(procWrap.parent.getPid())
             else:
                 if len(self.processList) > 1:
-                    self.processList.remove(procWrap)
-                    del procWrap
-                    self.switchProcess()
+                    return self.switchProcess("up")
                 else:
                     print("all processes exited")
                     exit(1)
@@ -103,15 +102,20 @@ class ProcessManager:
 
     def cont(self, singlestep=False):
         procWrap = self.getCurrentProcess()
-        try:
-            return procWrap.cont(singlestep=singlestep)
-        except ProcessEvent as event:
-            self.handle_ProcessEvent(event)
+        if procWrap.is_terminated:
+            return "process %d terminated already" % procWrap.getPid()
+        else:
+            try:
+                return procWrap.cont(singlestep=singlestep)
+            except ProcessEvent as event:
+                return self.handle_ProcessEvent(event)
 
     def switchProcess(self, cmd:str):
         """ ? prints root family
             up switches to parent
             101 switches to given process"""
+        if isinstance(cmd,int):
+            cmd=str(cmd)
         if "?" in cmd:
             return self.processList[0].getFamily()
 
@@ -147,6 +151,9 @@ class ProcessManager:
             nextproc = processList[(ind + 1) % len(processList)]
             self.currentProcess = nextproc
             return "switched to %d" % nextproc.ptraceProcess.pid
+
+    def finish(self):
+        return self.getCurrentProcess().finish()
 
     def family(self):
         return self.getCurrentProcess().getFamily()
