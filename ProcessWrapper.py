@@ -519,15 +519,15 @@ class ProcessWrapper:
             return str(e)
 
         # read data from memory and print it accordingly
-        symbol_delta = address - where_ad
         bytesread = self.ptraceProcess.readBytes(address, size * count)
 
-        newLineAfter = 16 // size
+        symbol_delta = address - where_ad
         line_pref = lambda offset: where_symbol + "+%#x" % (symbol_delta + offset)
-        result = ""
 
         format_str = "  %0" + "%d" % (size * 2) + "x"
+        newLineAfter = 16 // size
 
+        result = ""
         for i, value in enumerate(iter_unpack(unpack_fmt, bytesread)):
             if i % newLineAfter == 0:
                 result += "\n" + line_pref(i)
