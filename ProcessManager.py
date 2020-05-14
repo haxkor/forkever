@@ -161,3 +161,10 @@ class ProcessManager:
     def write(self, text):
         procWrap = self.getCurrentProcess()
         procWrap.writeToBuf(text)
+
+
+    def print(self, cmd):
+        return self.getCurrentProcess().print(cmd)
+
+    def examine(self, cmd):
+        return self.getCurrentProcess().examine(cmd)

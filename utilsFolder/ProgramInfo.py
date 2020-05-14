@@ -2,7 +2,7 @@ from utilsFolder.MapsReader import getMappings
 from itertools import groupby
 import pwn
 from weakref import ref
-#from ProcessWrapper import ProcessWrapper
+# from ProcessWrapper import ProcessWrapper
 from utilsFolder.Parsing import parseInteger
 
 
@@ -54,6 +54,8 @@ class ProgramInfo:
             keyfunc = lambda mapping: mapping.start
             baseAd = min(maps_group_pathname[0], key=keyfunc).start
 
+            if not elf.pie:
+                baseAd=0
             self.baseDict[lib] = baseAd
             elf.base = baseAd
 
@@ -90,5 +92,25 @@ class ProgramInfo:
                 offset = elf.base if elf.pie else 0
                 symbol_ad = elf.symbols[candidates[0]]
 
-
                 return symbol_ad + offset
+
+    def where(self, ip: int):
+        """ finds the symbol for the respective virtual adress"""
+        from operator import itemgetter
+        found = None
+        for mapping in getMappings(self.pid):
+            if mapping.start <= ip <= mapping.end:
+                found = mapping
+        if not found:
+            raise ValueError("adress is not in virtual adress space")
+
+        # find smaller symbols
+        elf = self._getElf(found.pathname)
+        symbols = list((symbolname, symbol_ad + elf.base) for
+                               (symbolname, symbol_ad) in elf.symbols.items())
+        filter_func = lambda sym_ad_tuple: sym_ad_tuple[1] <= ip
+        symbols_smaller = filter(filter_func, symbols)
+
+        # biggest matching is the one we need
+        symbol = max(symbols_smaller, key=itemgetter(1))
+        return symbol  # get symbol string

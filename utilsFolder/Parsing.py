@@ -1,9 +1,11 @@
 import re
-from ptrace.ctypes_tools import (truncateWord,
-                                 formatWordHex, formatAddress, formatAddressRange, word2bytes)
+from ptrace.ctypes_tools import (truncateWord, bytes2word, formatWordHex)
+from ptrace.error import PtraceError
+
 
 from ptrace.debugger.process import PtraceProcess
 REGISTER_REGEX = re.compile(r"\$[a-z]+[a-z0-9_]+")
+from logging2 import warning
 
 
 ptraceProc_g=None   # ugly but easy passing of proc to readRegister
@@ -58,7 +60,16 @@ def parseInteger(text, ptraceProc=None):
     except SyntaxError:
         raise ValueError("Invalid expression: %r" % orig_text)
     if is_pointer:
-        value = ptraceProc_g.readWord(value)
+        assert isinstance(ptraceProc,PtraceProcess)
+        #value = ptraceProc_g.readWord(value)
+
+        try:
+            value= ptraceProc.readBytes(value,8)
+            value = bytes2word(value)
+        except PtraceError as e:
+            warning(str(e))
+            value=0
+
     return value
 
 def parseBytes(text):

@@ -12,12 +12,16 @@ from HeapClass import Heap
 
 from ptrace.func_call import FunctionCallOptions
 from Constants import (RELATIVE_ADRESS_THRESHOLD, PRINT_BORING_SYSCALLS, logfile,
-    SIGNALS_IGNORE)
-from contextlib import redirect_stdout
+                       SIGNALS_IGNORE)
+
+from utilsFolder.Parsing import parseInteger, parseBytes
+
+from struct import iter_unpack
 
 import pwn
 
 from utilsFolder.ProgramInfo import ProgramInfo
+from logging2 import warning
 
 
 class ProcessWrapper:
@@ -36,7 +40,7 @@ class ProcessWrapper:
         self.inserted_function_data = False
         self.parent = None
         self.children = []
-        self.is_terminated=False
+        self.is_terminated = False
 
         if args:
             assert debugger is not None
@@ -115,7 +119,7 @@ class ProcessWrapper:
         ptrace_proc.writeBytes(ad, b"x")
 
         ptrace_proc.cont()
-        event= ptrace_proc.waitEvent()
+        event = ptrace_proc.waitEvent()
         assert isinstance(event, ProcessExecution), event  # execve syscall is hit
 
         ptrace_proc.syscall()
@@ -249,7 +253,7 @@ class ProcessWrapper:
         return format_tree(self, getRepr, getChildren)
 
     def insertBreakpoint(self, adress):
-        adress= self.programinfo.getAddrOf(adress)
+        adress = self.programinfo.getAddrOf(adress)
         if adress is None:
             return
 
@@ -380,7 +384,7 @@ class ProcessWrapper:
                     raise NotImplementedError
             else:
                 if event.signum in SIGNALS_IGNORE.values():
-                    event.signum=0
+                    event.signum = 0
                 else:
                     print("got %s, sending it back and continuing" % event)
 
@@ -473,25 +477,92 @@ class ProcessWrapper:
         """ run until the current function is finished
             detected by monitoring $rsp
             might break with compiler-optimisations"""
-        proc=self.ptraceProcess
-        saved_rsp= proc.getreg("rsp")
-        rsp= saved_rsp
+        proc = self.ptraceProcess
+        saved_rsp = rsp = proc.getreg("rsp")
 
         while rsp <= saved_rsp:
             self.cont(singlestep=True)
-            rsp= proc.getreg("rsp")
+            rsp = proc.getreg("rsp")
 
         print("rsp = %#x" % proc.getreg("rsp"))
         print("rip = %#x" % proc.getreg("rip"))
-        proc.getregs()
+
+        print(self.programinfo.where(proc.getreg("rip")))
+
+    def examine(self, cmd):
+        size_modifiers = dict([("b", (1,"B")), ("h", (2,"H")), ("w", (4,"L")), ("g", (8,"Q"))])
+        instr, _, cmd = cmd.partition(" ")
+
+        # check if user specified some special formatting
+        if "/" in instr:
+            _, _, instr = instr.partition("/")
+            args = PRINT_ARGS_REGEX.match(instr)
+            count = int(args.group(1))
+            fmt = args.group(2)
+            if fmt not in size_modifiers.keys():
+                if fmt:
+                    warning("fmt %s is not an option" % fmt)
+                fmt="w"
+        else:
+            count = 1
+            fmt = "w"
 
 
-    def examine(self,cmd):
-        pass
+        size,unpack_fmt= size_modifiers[fmt]
+        unpack_fmt = "<" + unpack_fmt
+
+        try:
+            address = parseInteger(cmd, self.ptraceProcess)
+
+            # make sure adress is in virtual adress space
+            where_symbol, where_ad =self.programinfo.where(address)
+        except ValueError as e:
+            return str(e)
+
+        # read data from memory and print it accordingly
+        symbol_delta = address - where_ad
+        bytesread= self.ptraceProcess.readBytes(address,size*count)
+
+        newLineAfter= 16//size
+        line_pref= lambda offset: where_symbol + "+%#x" % (symbol_delta + offset)
+        result=""
+
+        format_str= "  %0" + "%d" % (size*2) + "x"
+
+        for i,value in enumerate(iter_unpack(unpack_fmt, bytesread)):
+            if i % newLineAfter ==0:
+                result+= "\n" + line_pref(i)
+            result+= format_str % value
+
+        return result[1:]   # remove first newline
 
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+    def print(self, cmd: str):
+        instr, _, cmd = cmd.partition(" ")
+        try:
+            result = hex(parseInteger(cmd, self.ptraceProcess))
+        except ValueError as e:
+            result = str(e)
+        return result
+
+
+import re
+
+PRINT_ARGS_REGEX = re.compile(r"([0-9]*)"
+                              r"([gbw]?)")
 
 inject = pwn.asm("syscall", arch="amd64")

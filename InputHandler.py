@@ -85,6 +85,12 @@ class InputHandler:
         elif cmd.startswith("maps"):
             result= manager.dumpMaps()
 
+        elif cmd.startswith("p"):
+            result=manager.print(cmd)
+
+        elif cmd.startswith("x"):
+            result=manager.examine(cmd)
+
         return result if result else ""
 
 
