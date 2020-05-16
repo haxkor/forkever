@@ -21,7 +21,7 @@ from struct import iter_unpack
 import pwn
 
 from utilsFolder.ProgramInfo import ProgramInfo
-from logging2 import warning
+from logging2 import warning, info
 
 
 class ProcessWrapper:
@@ -501,7 +501,7 @@ class ProcessWrapper:
             fmt = args.group(2)
             if fmt not in size_modifiers.keys():
                 if fmt:
-                    warning("fmt %s is not an option" % fmt)
+                    info("fmt %s is not an option" % fmt)
                 fmt = "w"
         else:
             count = 1

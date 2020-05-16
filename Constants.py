@@ -10,7 +10,7 @@ hyx_path = "/home/jasper/CLionProjects/hyxWIP/hyx-0.1.5/myhyx"
 
 path_launcher = "launcher/dummylauncher"
 
-runargs = ["x-terminal-emulator", "--hold", "-e"]
+runargs = ["x-terminal-emulator",  "-e"]    # "--hold",
 
 RELATIVE_ADRESS_THRESHOLD = 0xFFffFFff
 
