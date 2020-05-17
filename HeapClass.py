@@ -90,7 +90,6 @@ class Heap:
         if start >= stop:
             raise ValueError("start >= stop")
 
-        print("start= %x, stop= %x" % (start, stop))
 
         return start, stop
 
@@ -127,7 +126,6 @@ class Heap:
             with open("/proc/%d/mem" % self.pid, "rb") as mem:
                 mem.seek(self.start)
                 buf = bytearray(self.stop - self.start)
-                print(len(buf))
                 assert self.stop - self.start == mem.readinto(buf)
             newhash = hashlib.sha3_224(buf).digest()
 
