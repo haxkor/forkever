@@ -194,8 +194,6 @@ class InputHandler:
         convert_func = lambda slice_str: int(slice_str, 16)*0x1000 if slice_str else 0
         start, stop = map(convert_func, [args.group(4), args.group(6)])
 
-        print(hex(stop))
-
         if not segment:
             segment = "heap"
 
@@ -212,7 +210,7 @@ class InputHandler:
         except ValueError as e:
             return str(e)
 
-        print(heap.start, heap.file_path)
+        print(heap.file_path)
 
         self.hyxTalker = HyxTalker(self.manager.socketname, heap, self.inputPoll)
 
@@ -231,9 +229,9 @@ class InputHandler:
 
 
 INIT_HYX_ARGS = re.compile(
-    r"([\w./-]+)"  # name of library
+    r"([\w./-]+)?"  # name of library
     r"( [rwxps]+)?"  # permissions
-    r"( \["  # slicing
+    r"( ?\["  # slicing
     r"([0-9a-fA-F]*)"   
     r"(i?)" # i for start_nonzero
     r":"
