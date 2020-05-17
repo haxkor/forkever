@@ -112,8 +112,8 @@ class HyxTalker():
         changetype, changeret = self.heap.checkChange()
 
         if changetype == "same":
-            # print("no change detected")
             pass
+
         elif changetype == "length":
             self.sendNewHeap(*changeret)
 

@@ -98,11 +98,7 @@ class ProcessWrapper:
             new_bp.old_bytes = bp.old_bytes
 
     def getHeap(self):
-        if self.heap is None:
-            self.heap = Heap(self.ptraceProcess.pid)
-            return self.heap
-        else:
-            return self.heap
+        return self.heap
 
     def setupPtraceProcess(self) -> PtraceProcess:
         from ptrace.debugger.debugger import PtraceDebugger

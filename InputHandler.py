@@ -2,9 +2,11 @@ from utilsFolder.PaulaPoll import PaulaPoll
 from ProcessManager import ProcessManager
 from utilsFolder.PollableQueue import PollableQueue
 from signal import SIGWINCH
+import re
 
 from threading import Thread
 from utilsFolder.InputReader import InputReader
+from HeapClass import Heap, MemorySegmentInitArgs
 
 from ProcessWrapper import ProcessWrapper
 from HyxTalker import HyxTalker
@@ -34,8 +36,9 @@ class InputHandler:
         proc = manager.getCurrentProcess().ptraceProcess
 
         result = ""
-        if cmd == "hyx" and not self.hyxTalker:
-            self.init_hyx()
+        if cmd.startswith("hyx") and not self.hyxTalker:
+            _, _, cmd = cmd.partition(" ")
+            result=self.init_hyx(cmd)
 
         elif cmd.startswith("c"):  # continue
             result = manager.cont()
@@ -44,7 +47,7 @@ class InputHandler:
             result = manager.write(cmd[2:].encode() + b"\n")  # TODO
 
         elif cmd.startswith("fork"):
-            result = manager.fork()
+            result = self.fork()
 
         elif cmd.startswith("proclist"):
             print(manager.processList)
@@ -68,7 +71,7 @@ class InputHandler:
             result = manager.free(pointer)
 
         elif cmd.startswith("fin"):
-            result=manager.finish()
+            result = manager.finish()
 
         elif cmd.startswith("try"):
             result = manager.tryFunction(cmd.split(" ")[1], cmd.split(" ")[2:])
@@ -83,16 +86,15 @@ class InputHandler:
             result = manager.family()
 
         elif cmd.startswith("maps"):
-            result= manager.dumpMaps()
+            result = manager.dumpMaps()
 
         elif cmd.startswith("p"):
-            result=manager.print(cmd)
+            result = manager.print(cmd)
 
         elif cmd.startswith("x"):
-            result=manager.examine(cmd)
+            result = manager.examine(cmd)
 
         return result if result else ""
-
 
     def inputLoop(self):
 
@@ -177,30 +179,71 @@ class InputHandler:
         self.hyxTalker.destroy(rootsock=True)
         self.hyxTalker = None
 
-    def init_hyx(self):
+    def init_hyx(self, cmd="heap rw"):
         currentProcess = self.manager.getCurrentProcess()
-        assert isinstance(currentProcess, ProcessWrapper)
+        args = INIT_HYX_ARGS.match(cmd)
 
-        if currentProcess.heap is None:  # TODO
-            try:
-                currentProcess.setHeap()
-            except KeyError:
-                print("there is no heap yet, not starting hyx.")
-                return
-        else:
-            print("there already is a heap")
+        if not args:
+            return """could not match this
+            example use: hyx libc rwx [a1:] this will load the libc segment with rwx permissions starting at offset 0xA1000"""
 
-        heap = currentProcess.getHeap()
+        segment = args.group(1)
+        permissions = args.group(2)
+
+        # if sliceoffsets are specified, convert the strings to int
+        convert_func = lambda slice_str: int(slice_str, 16)*0x1000 if slice_str else 0
+        start, stop = map(convert_func, [args.group(4), args.group(6)])
+
+        print(hex(stop))
+
+        if not segment:
+            segment = "heap"
+
+        if not permissions:
+            permissions = "rwp"
+
+        init_args = MemorySegmentInitArgs(segment, permissions, start, stop,
+                                          start_nonzero=bool(args.group(5)),
+                                          stop_nonzero=bool(args.group(7))
+                                          )
+
+        try:
+            heap = Heap(currentProcess, init_args)
+        except ValueError as e:
+            return str(e)
+
         print(heap.start, heap.file_path)
 
-        file_path = currentProcess.heap.file_path
-        offset = currentProcess.heap.start
-        self.hyxTalker = HyxTalker(self.manager.socketname, currentProcess.heap, self.inputPoll)
+        self.hyxTalker = HyxTalker(self.manager.socketname, heap, self.inputPoll)
 
+    def fork(self):
+        manager = self.manager
+        currProc = manager.getCurrentProcess()
+        children_count = len(currProc.children)
+        result = manager.fork()
+        if len(currProc.children) <= children_count:
+            return result
+
+        new_child = currProc.children[-1]
+        self.hyxTalker.heap = Heap(new_child)
+
+        return result
+
+
+INIT_HYX_ARGS = re.compile(
+    r"([\w./-]+)"  # name of library
+    r"( [rwxps]+)?"  # permissions
+    r"( \["  # slicing
+    r"([0-9a-fA-F]*)"   
+    r"(i?)" # i for start_nonzero
+    r":"
+    r"(-?[0-9a-fA-F]*)"
+    r"(i?)"
+    r"\])?"
+)
 
 if __name__ == "__main__":
     from utilsFolder import utils
-
 
     # path_to_hack = "/home/jasper/university/barbeit/utilstest/cprograms/mallocinfgets"
     # path_to_hack= "/home/jasper/university/barbeit/syscalltrap/t2"
