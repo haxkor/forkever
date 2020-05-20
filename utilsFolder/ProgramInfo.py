@@ -5,6 +5,8 @@ from weakref import ref
 # from ProcessWrapper import ProcessWrapper
 from utilsFolder.Parsing import parseInteger
 
+from Constants import PRINT_OTHER_CANDIDATES
+
 
 class ProgramInfo:
 
@@ -55,7 +57,7 @@ class ProgramInfo:
             baseAd = min(maps_group_pathname[0], key=keyfunc).start
 
             if not elf.pie:
-                baseAd=0
+                baseAd = 0
             self.baseDict[lib] = baseAd
             elf.base = baseAd
 
@@ -73,26 +75,26 @@ class ProgramInfo:
 
         elf = self._getElf(lib)
 
-        if symbol.startswith("0x"):
-            offset = elf.base if elf.pie else 0
-            val = parseInteger(symbol, self.procWrap_ref())
-            return val + offset
+        find_cands = lambda x: symbol in x
+        candidates = list(filter(find_cands, elf.symbols.keys()))
+
+        if len(candidates) == 0:
+            raise ValueError("no symbol for %s:%s found" % (lib, symbol))
         else:
-            find_cands = lambda x: symbol in x
-            candidates = list(filter(find_cands, elf.symbols.keys()))
+            candidates = sorted(candidates, key=len)
+            if len(candidates) > 1 and PRINT_OTHER_CANDIDATES:
+                others = list((cand, hex(elf.symbols[cand])) for cand in candidates)
+                print("chose %s out of %s" % (candidates[0], others))
 
-            if len(candidates) == 0:
-                print("symbol not found")
-            else:
-                candidates = sorted(candidates, key=len)
-                if len(candidates) > 1:
-                    others = list((cand, hex(elf.symbols[cand])) for cand in candidates)
-                    print("chose %s out of %s" % (candidates[0], others))
+            offset = elf.base if elf.pie else 0
+            final_cand = candidates[0]
+            if len(final_cand) / len(symbol) > 1.5:
+                raise ValueError("shortest possible candidate %s still too long.\n"
+                                 "other candidates: %s" % (final_cand, candidates[:10]))
 
-                offset = elf.base if elf.pie else 0
-                symbol_ad = elf.symbols[candidates[0]]
+            symbol_ad = elf.symbols[final_cand]
 
-                return symbol_ad + offset
+            return symbol_ad + offset
 
     def where(self, ip: int):
         """ finds the symbol for the respective virtual adress"""
@@ -107,7 +109,7 @@ class ProgramInfo:
         # find smaller symbols
         elf = self._getElf(found.pathname)
         symbols = list((symbolname, symbol_ad + elf.base) for
-                               (symbolname, symbol_ad) in elf.symbols.items())
+                       (symbolname, symbol_ad) in elf.symbols.items())
         filter_func = lambda sym_ad_tuple: sym_ad_tuple[1] <= ip
         symbols_smaller = filter(filter_func, symbols)
 

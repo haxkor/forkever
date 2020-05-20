@@ -16,6 +16,9 @@ RELATIVE_ADRESS_THRESHOLD = 0xFFffFFff
 
 PRINT_BORING_SYSCALLS = True
 
+# when looking up a symbol, other symbols matching the lookup will be printed
+PRINT_OTHER_CANDIDATES = False
+
 logfile= open("logfile","w")
 
 from signal import SIGCHLD

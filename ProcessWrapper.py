@@ -249,7 +249,10 @@ class ProcessWrapper:
         return format_tree(self, getRepr, getChildren)
 
     def insertBreakpoint(self, adress):
-        adress = self.programinfo.getAddrOf(adress)
+        #adress = self.programinfo.getAddrOf(adress)
+        adress = parseInteger(adress, self)
+        print("setting breakpoint at %x" % adress)
+
         if adress is None:
             return
 
@@ -534,7 +537,7 @@ class ProcessWrapper:
     def print(self, cmd: str):
         instr, _, cmd = cmd.partition(" ")
         try:
-            result = hex(parseInteger(cmd, self.ptraceProcess))
+            result = hex(parseInteger(cmd, self))
         except ValueError as e:
             result = str(e)
         return result

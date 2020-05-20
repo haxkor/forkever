@@ -184,8 +184,8 @@ class InputHandler:
         args = INIT_HYX_ARGS.match(cmd)
 
         if not args:
-            return """could not match this
-            example use: hyx libc rwx [a1:] this will load the libc segment with rwx permissions starting at offset 0xA1000"""
+            return "could not match this \nexample use: hyx libc rwx [a1:] this will load the libc segment with rwx " \
+                   "permissions starting at offset 0xA1000 "
 
         segment = args.group(1)
         permissions = args.group(2)
