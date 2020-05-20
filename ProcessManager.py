@@ -19,6 +19,7 @@ class ProcessManager:
     def __init__(self, path_to_hack, socketname: str, pollobj: PaulaPoll):
         self.socketname = socketname
         self.pollobj = pollobj  # PollObj used by the input monitor, needed to register new processes
+        self.syscalls_to_trace=[]
 
         self.processList = []
         self.debugger = self.startDebugger([path_launcher, path_to_hack])
@@ -44,6 +45,7 @@ class ProcessManager:
         debugger.enableSysgood()  # to differentiate between traps raised by syscall, no syscall
 
         newProcess = ProcessWrapper(args=args, debugger=debugger, redirect=True)  # first process
+        newProcess.syscalls_to_trace= self.syscalls_to_trace
         self.addProcess(newProcess)
 
         return debugger
@@ -168,3 +170,22 @@ class ProcessManager:
 
     def examine(self, cmd):
         return self.getCurrentProcess().examine(cmd)
+
+    def trace_syscall(self,cmd:str):
+        _,_,cmd= cmd.partition(" ")
+        from ptrace.syscall.ptrace_syscall import SYSCALL_NAMES
+        cmd=cmd.strip()
+
+        if cmd in SYSCALL_NAMES.values():
+            self.syscalls_to_trace.append(cmd)
+        elif "?" in cmd:
+            return "possible syscalls" + " ".join(SYSCALL_NAMES.keys())
+        else:
+            print(cmd)
+            return "currently tracing " + " ".join(self.syscalls_to_trace)
+
+
+
+
+
+

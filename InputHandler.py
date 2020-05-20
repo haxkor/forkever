@@ -94,6 +94,14 @@ class InputHandler:
         elif cmd.startswith("x"):
             result = manager.examine(cmd)
 
+        elif cmd.startswith("trace"):
+            result = manager.trace_syscall(cmd)
+
+        elif cmd.startswith("getsegment"):
+            _,_, cmd= cmd.partition(" ")
+
+            result = manager.getCurrentProcess().get_own_segment(0)
+
         return result if result else ""
 
     def inputLoop(self):

@@ -1,6 +1,8 @@
 from utilsFolder.PaulaPipe import Pipe
 from utilsFolder.tree import format_tree
 
+from mmap import PROT_EXEC, PROT_READ, PROT_WRITE, MAP_PRIVATE, MAP_ANONYMOUS
+
 from ptrace.debugger.process import PtraceProcess
 from ptrace.debugger.process_event import ProcessExecution, ProcessEvent
 from subprocess import Popen
@@ -27,7 +29,8 @@ from logging2 import warning, info
 class ProcessWrapper:
     """Provides an easy way to redirect stdout and stderr using pipes. Write to the processes STDIN and read from STDOUT at any time! """
 
-    def __init__(self, args=None, debugger=None, redirect=False, parent=None, ptraceprocess=None):
+    def __init__(self, args=None, debugger=None, redirect=False, parent=None, ptraceprocess=None,
+                 syscalls_to_trace=None):
 
         self.syscall_options = FunctionCallOptions(
             write_types=True,
@@ -41,6 +44,8 @@ class ProcessWrapper:
         self.parent = None
         self.children = []
         self.is_terminated = False
+        self.syscalls_to_trace = parent.syscalls_to_trace if parent else None  # first will be set by ProcessManager
+        self.own_segment = None
 
         if args:
             assert debugger is not None
@@ -197,9 +202,9 @@ class ProcessWrapper:
                 "rax") == 0xffFFffFFffFFffda  # rax == -ENOSYS means we are most likely about to enter a syscall
             process.setreg("orig_rax", 57)
         else:
-            original = process.readBytes(ip, len(inject))
+            original = process.readBytes(ip, len(inject_syscall_instr))
             process.setreg("rax", 57)  # fork code
-            process.writeBytes(ip, inject)
+            process.writeBytes(ip, inject_syscall_instr)
 
         process.singleStep()  # continue till fork happended
         event = process.waitEvent()
@@ -249,7 +254,7 @@ class ProcessWrapper:
         return format_tree(self, getRepr, getChildren)
 
     def insertBreakpoint(self, adress):
-        #adress = self.programinfo.getAddrOf(adress)
+        # adress = self.programinfo.getAddrOf(adress)
         adress = parseInteger(adress, self)
         print("setting breakpoint at %x" % adress)
 
@@ -319,7 +324,7 @@ class ProcessWrapper:
 
         oldregs = proc.getregs()
 
-        argregs = ["rdi", "rsi", "rdx", "r10"]  # set new args (depends on calling convention)
+        argregs = ["rdi", "rsi", "rdx", "rcx", "r9", "r8"]  # set new args (depends on calling convention)
         if len(args) > len(argregs):
             raise ValueError("too many arguments supplied")
         for (val, reg) in zip(args, argregs):
@@ -357,8 +362,6 @@ class ProcessWrapper:
     def cont(self, signum=0, singlestep=False):
 
         proc = self.ptraceProcess
-
-        self.syscallsToTrace = ["read", "write", "fork"]
 
         event = self.getNextEvent(signum, singlestep)
         if isinstance(event, str):  # happens if an interesting syscall is hit
@@ -459,7 +462,7 @@ class ProcessWrapper:
                 print("process requests %d bytes from stdin (%d written)" % written)
 
         # skip over boring syscalls
-        if syscall.name not in self.syscallsToTrace:
+        if syscall.name not in self.syscalls_to_trace:
             if syscall.result is not None and PRINT_BORING_SYSCALLS:  # print results of boring syscalls
                 print("syscall %s = %s" % (syscall.format(), syscall.result_text))
 
@@ -542,10 +545,46 @@ class ProcessWrapper:
             result = str(e)
         return result
 
+    def get_own_segment(self, address=0x6f00e1337e000):
+        if self.own_segment:
+            return self.own_segment
+
+        proc = self.ptraceProcess
+
+        # save state
+        ip = proc.getInstrPointer()
+        old_regs = proc.getregs()
+        old_code = proc.readBytes(ip, len(inject_syscall_instr))
+
+        # prepare mmap syscall
+        prot = PROT_READ | PROT_WRITE | PROT_EXEC
+        mapflags = MAP_ANONYMOUS | MAP_PRIVATE
+        length = 0x1000
+
+        fill_regs = ["rax", "rdi", "rsi", "rdx", "r10", "r8", "r9"]     # calling convention for syscalls
+        args = [9, address, length, prot, mapflags, -1, 0]  # syscallcode, ..., filedescriptor, offset
+        assert len(args) == len(fill_regs)
+        for reg, arg in zip(fill_regs, args):
+            proc.setreg(reg, arg)
+
+        proc.writeBytes(ip, inject_syscall_instr)
+
+        # step over the syscall
+        proc.syscall()
+        proc.waitSyscall()
+        proc.syscall()
+        proc.waitSyscall()
+
+        self.own_segment = proc.getreg("rax")
+
+        # restore state
+        proc.writeBytes(ip, old_code)
+        proc.setregs(old_regs)
+
 
 import re
 
 PRINT_ARGS_REGEX = re.compile(r"([0-9]*)"
                               r"([gbw]?)")
 
-inject = pwn.asm("syscall", arch="amd64")
+inject_syscall_instr = pwn.asm("syscall", arch="amd64")
