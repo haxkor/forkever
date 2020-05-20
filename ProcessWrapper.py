@@ -300,9 +300,17 @@ class ProcessWrapper:
         clone.callFunction(funcname, *args)
 
     def callFunction(self, funcname, *args, tillResult=False):
-        """ immediately calls a desired function by overwriting code that is about to be executed.
+        """ call mmap to map a page where we can inject code.
+            the injected code will call the specified function.
             State will be restored as soon as function returns.
-            Can not be called if the process just entered syscall"""
+            Can not be called if the process just entered syscall
+
+            How does is work:
+            After the specified function is called, it runs into an interrupt.
+            The "contintue" logic will check for each received trap if we have
+            reached this certain interrupt.
+            Once that is the case, _afterCallFunction will be called"""
+
         func_ad = self.programinfo.getAddrOf(funcname)
         if func_ad is None:
             print("function %s not found" % funcname)
@@ -316,13 +324,13 @@ class ProcessWrapper:
             print("already in an inserted function, returning")
             return
 
-        inject = """
+        inject_at = self.get_own_segment()
+
+        inject_code = """
             mov eax, %#x
             call eax
             int3""" % func_ad
-        inject = pwn.asm(inject)
-
-        oldregs = proc.getregs()
+        inject_code = pwn.asm(inject_code)
 
         argregs = ["rdi", "rsi", "rdx", "rcx", "r9", "r8"]  # set new args (depends on calling convention)
         if len(args) > len(argregs):
@@ -330,21 +338,22 @@ class ProcessWrapper:
         for (val, reg) in zip(args, argregs):
             proc.setreg(reg, val)
 
+        oldregs = proc.getregs()
         ip = proc.getInstrPointer()
-        oldbytes = proc.readBytes(ip, len(inject))
-        proc.writeBytes(ip, inject)
-        finish = ip + len(inject)  # if ip==finish, call afterCallFunction
+        finish = inject_at + len(inject_code)  # if ip==finish, call afterCallFunction
 
-        self.inserted_function_data = (ip, finish, oldbytes, oldregs, funcname)
+        proc.writeBytes(inject_at, inject_code)
+        proc.setInstrPointer(inject_at)
+
+        self.inserted_function_data = (ip, finish, oldregs, funcname)
 
         res = self.cont()
         return "none" if res is None else res
 
     def _afterCallFunction(self):
         proc = self.ptraceProcess
-        originalip, finish, oldbytes, oldregs, funcname = self.inserted_function_data
+        _, _, oldregs, funcname = self.inserted_function_data
 
-        proc.writeBytes(originalip, oldbytes)
         result = proc.getreg("rax")
         proc.setregs(oldregs)
         self.inserted_function_data = None
@@ -383,6 +392,8 @@ class ProcessWrapper:
 
                 else:
                     print(event)
+                    print("ip= %#x" % ip, self.programinfo.where(ip))
+                    print(self.inserted_function_data)
                     raise NotImplementedError
             else:
                 if event.signum in SIGNALS_IGNORE.values():
@@ -580,6 +591,8 @@ class ProcessWrapper:
         # restore state
         proc.writeBytes(ip, old_code)
         proc.setregs(old_regs)
+
+        return self.own_segment
 
 
 import re

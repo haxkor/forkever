@@ -33,7 +33,8 @@ class InputHandler:
 
     def _execute(self, cmd):
         manager = self.manager
-        proc = manager.getCurrentProcess().ptraceProcess
+        procWrap = manager.getCurrentProcess()
+        proc= procWrap.ptraceProcess
 
         result = ""
         if cmd.startswith("hyx") and not self.hyxTalker:
@@ -62,12 +63,12 @@ class InputHandler:
 
         elif cmd.startswith("malloc"):
             _, _, val = cmd.partition(" ")
-            val = parseInteger(val, proc)
+            val = parseInteger(val, procWrap)
             result = manager.malloc(val)
 
         elif cmd.startswith("free"):
             _, _, pointer = cmd.partition(" ")
-            pointer = parseInteger(pointer, proc)
+            pointer = parseInteger(pointer, procWrap)
             result = manager.free(pointer)
 
         elif cmd.startswith("fin"):
