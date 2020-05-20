@@ -239,7 +239,7 @@ class InputHandler:
 
 INIT_HYX_ARGS = re.compile(
     r"([\w./-]+)?"  # name of library
-    r"( [rwxps]+)?"  # permissions
+    r" ([rwxps]+)?"  # permissions
     r"( ?\["  # slicing
     r"([0-9a-fA-F]*)"   
     r"(i?)" # i for start_nonzero
