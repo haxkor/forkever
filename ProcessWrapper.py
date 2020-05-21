@@ -185,7 +185,19 @@ class ProcessWrapper:
 
     def forkProcess(self):
         """ forks the process. If the process just syscalled (and is trapped in the syscall entry),
-            the forked child starts just before that syscall."""
+            the forked child starts just before that syscall.
+
+            The processManager will switch to the newly created child automatically.
+
+        How does it work?
+        If the process is about to enter a syscall:
+            Modify $rax to contain the "fork" syscall code.
+        Else:
+            Insert a syscall instruction at the current $rip
+
+        Step over the syscall, start tracing the new child.
+        Restore the states of both processes. (Child does not reenter syscall)
+        """
 
         def printregs(s, proc):
             print(s, "ip= %#x\trax=%#x\torig_rax=%#x" % (
@@ -245,6 +257,7 @@ class ProcessWrapper:
         return child
 
     def getFamily(self):
+        """print all children of the process"""
         def getRepr(procWrap: ProcessWrapper):
             return str(procWrap.getPid())
 
@@ -254,7 +267,6 @@ class ProcessWrapper:
         return format_tree(self, getRepr, getChildren)
 
     def insertBreakpoint(self, adress):
-        # adress = self.programinfo.getAddrOf(adress)
         adress = parseInteger(adress, self)
         print("setting breakpoint at %x" % adress)
 
@@ -300,12 +312,15 @@ class ProcessWrapper:
         clone.callFunction(funcname, *args)
 
     def callFunction(self, funcname, *args, tillResult=False):
-        """ call mmap to map a page where we can inject code.
-            the injected code will call the specified function.
+        """ Redirect control flow to call the specified function with given arguments.
             State will be restored as soon as function returns.
-            Can not be called if the process just entered syscall
+            If you dont see a result immediately, continue till you have stepped through all
+            breakpoints/syscalls
+            Does nothing if the process just entered syscall
 
             How does is work:
+            call mmap to map a page where we can inject code.
+            the injected code will call the specified function.
             After the specified function is called, it runs into an interrupt.
             The "contintue" logic will check for each received trap if we have
             reached this certain interrupt.
@@ -360,20 +375,28 @@ class ProcessWrapper:
         return "%s returned %#x" % (funcname, result)
 
     def malloc(self, n):
+        """call plt.malloc(n)"""
         return self.callFunction("plt.malloc", n)
 
     def free(self, pointer):
+        """call plt.free(pointer)
+        If you want to call libc.free, use tryFunction(libc:free, pointer)"""
         return self.callFunction("plt.free", pointer)
 
     def singlestep(self):
+        """singlestep"""
         return self.cont(singlestep=True)
 
     def cont(self, signum=0, singlestep=False):
-        """continue execution of the process"""
+        """continue execution of the process
+        stops at:
+            - a traced syscall  (?trace)
+            - an inserted function
+            - specified breakpoints"""
 
         proc = self.ptraceProcess
 
-        event = self.getNextEvent(signum, singlestep)
+        event = self._getNextEvent(signum, singlestep)
         if isinstance(event, str):  # happens if an interesting syscall is hit
             return event
 
@@ -413,7 +436,7 @@ class ProcessWrapper:
 
     #
     #
-    def getNextEvent(self, signum=0, singlestep=False):
+    def _getNextEvent(self, signum=0, singlestep=False):
         """ continues execution until an interesing syscall is entered/exited or
             some other event (hopyfully breakpoint sigtrap) happens"""
 
@@ -478,7 +501,7 @@ class ProcessWrapper:
             if syscall.result is not None and PRINT_BORING_SYSCALLS:  # print results of boring syscalls
                 print("syscall %s = %s" % (syscall.format(), syscall.result_text))
 
-            return self.getNextEvent()
+            return self._getNextEvent()
 
         # we are tracing the specific syscall
         else:
@@ -488,9 +511,10 @@ class ProcessWrapper:
                 return "process is about to syscall %s" % syscall.format()
 
     def finish(self):
-        """ run until the current function is finished
-            detected by monitoring $rsp
-            might break with compiler-optimisations"""
+        """DOES NOT WORK PROPERLY
+         run until the current function is finished
+        detected by monitoring $rsp
+        might break with compiler-optimisations"""
         proc = self.ptraceProcess
         saved_rsp = rsp = proc.getreg("rsp")
 
@@ -504,8 +528,17 @@ class ProcessWrapper:
         print(self.programinfo.where(proc.getreg("rip")))
 
     def examine(self, cmd):
+        """examine memory. (use of $reg is possible)
+                formatting options:  b,w,h,g"""
         size_modifiers = dict([("b", (1, "B")), ("h", (2, "H")), ("w", (4, "L")), ("g", (8, "Q"))])
         instr, _, cmd = cmd.partition(" ")
+
+        try:
+            address = parseInteger(cmd, self.ptraceProcess)
+            # make sure adress is in virtual adress space
+            where_symbol, where_ad = self.programinfo.where(address)
+        except ValueError as e:
+            return str(e)
 
         # check if user specified some special formatting
         if "/" in instr:
@@ -513,7 +546,8 @@ class ProcessWrapper:
             args = PRINT_ARGS_REGEX.match(instr)
             count = int(args.group(1))
             fmt = args.group(2)
-            if fmt not in size_modifiers.keys():
+
+            if fmt not in size_modifiers.keys() + ["i"]:
                 if fmt:
                     info("fmt %s is not an option" % fmt)
                 fmt = "w"
@@ -521,24 +555,24 @@ class ProcessWrapper:
             count = 1
             fmt = "w"
 
+        # special case, disassemble and return early
+        if fmt == "i":
+            bytesread = self.ptraceProcess.readBytes(address, count)
+            print(pwn.disasm(bytesread))
+            return
+
         size, unpack_fmt = size_modifiers[fmt]
         unpack_fmt = "<" + unpack_fmt
-
-        try:
-            address = parseInteger(cmd, self.ptraceProcess)
-
-            # make sure adress is in virtual adress space
-            where_symbol, where_ad = self.programinfo.where(address)
-        except ValueError as e:
-            return str(e)
 
         # read data from memory and print it accordingly
         bytesread = self.ptraceProcess.readBytes(address, size * count)
 
+        # to print offset
         symbol_delta = address - where_ad
         line_pref = lambda offset: where_symbol + "+%#x" % (symbol_delta + offset)
 
-        format_str = "  %0" + "%d" % (size * 2) + "x"
+
+        format_str = "  %0" + "%d" % (size * 2) + "x"   # to pad with zeros
         newLineAfter = 16 // size
 
         result = ""
@@ -550,6 +584,10 @@ class ProcessWrapper:
         return result[1:]  # remove first newline
 
     def print(self, cmd: str):
+        """print.  prefixing with * dereferences the result.
+        Otherwise, the * works as the multiplication operator.
+        use: p $rax+1+malloc
+            p *$rbp+0x10"""
         instr, _, cmd = cmd.partition(" ")
         try:
             result = hex(parseInteger(cmd, self))
@@ -573,7 +611,7 @@ class ProcessWrapper:
         mapflags = MAP_ANONYMOUS | MAP_PRIVATE
         length = 0x1000
 
-        fill_regs = ["rax", "rdi", "rsi", "rdx", "r10", "r8", "r9"]     # calling convention for syscalls
+        fill_regs = ["rax", "rdi", "rsi", "rdx", "r10", "r8", "r9"]  # calling convention for syscalls
         args = [9, address, length, prot, mapflags, -1, 0]  # syscallcode, ..., filedescriptor, offset
         assert len(args) == len(fill_regs)
         for reg, arg in zip(fill_regs, args):
@@ -599,6 +637,6 @@ class ProcessWrapper:
 import re
 
 PRINT_ARGS_REGEX = re.compile(r"([0-9]*)"
-                              r"([gbw]?)")
+                              r"([ighbw]?)")
 
 inject_syscall_instr = pwn.asm("syscall", arch="amd64")

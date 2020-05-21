@@ -61,12 +61,13 @@ class ProcessManager:
         try:
             return self.getCurrentProcess().callFunction(funcname, *args, tillResult=tillResult)
         except ProcessEvent as event:
-            self.handle_ProcessEvent(event)
+            self._handle_ProcessEvent(event)
 
     def malloc(self, val):
         return self.callFunction("malloc", val)
 
     def dumpMaps(self):
+        """print /proc/pid/maps of current process"""
         return "".join(str(mapping) + "\n" for mapping in self.getCurrentProcess().ptraceProcess.readMappings())
 
     def tryFunction(self, funcname, args):
@@ -85,7 +86,7 @@ class ProcessManager:
         _, _, cmd = cmd.partition(" ")
         return self.getCurrentProcess().insertBreakpoint(cmd)
 
-    def handle_ProcessEvent(self, event):
+    def _handle_ProcessEvent(self, event):
         def handle_Exit():
             procWrap = self.getCurrentProcess()
             procWrap.is_terminated = True
@@ -111,12 +112,12 @@ class ProcessManager:
             try:
                 return procWrap.cont(singlestep=singlestep)
             except ProcessEvent as event:
-                return self.handle_ProcessEvent(event)
+                return self._handle_ProcessEvent(event)
 
     def switchProcess(self, cmd:str):
-        """ ? prints root family
-            up switches to parent
-            101 switches to given process"""
+        """ switch ? prints all processes
+            switch up switches to parent
+            switch 137 switches to process 137"""
         if isinstance(cmd,int):
             cmd=str(cmd)
         if "?" in cmd:
