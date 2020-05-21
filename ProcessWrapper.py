@@ -3,7 +3,7 @@ from utilsFolder.tree import format_tree
 
 from mmap import PROT_EXEC, PROT_READ, PROT_WRITE, MAP_PRIVATE, MAP_ANONYMOUS
 
-from ptrace.debugger.process import PtraceProcess
+from ptrace.debugger.process import PtraceProcess, PtraceError
 from ptrace.debugger.process_event import ProcessExecution, ProcessEvent
 from subprocess import Popen
 from utilsFolder.utils import path_launcher
@@ -145,7 +145,11 @@ class ProcessWrapper:
         maps = self.readMappings()
 
     def writeToBuf(self, text):
-        """write to the processes stdin buffer, awaiting read syscall"""
+        """write to the processes stdin.
+        Note that it isnt directly written to its stdin, but instead written to an internal buffer.
+        Upon a read syscall (trying to consume from stdin), the buffers contents are written to the actual stdin.
+        This means that if you write to stdin and fork before consumption, both processes will get to consume
+        what you have previously written."""
         self.stdin_buf += text
 
     def writeBufToPipe(self, n: int):
@@ -534,7 +538,7 @@ class ProcessWrapper:
         instr, _, cmd = cmd.partition(" ")
 
         try:
-            address = parseInteger(cmd, self.ptraceProcess)
+            address = parseInteger(cmd, self)
             # make sure adress is in virtual adress space
             where_symbol, where_ad = self.programinfo.where(address)
         except ValueError as e:
@@ -547,7 +551,7 @@ class ProcessWrapper:
             count = int(args.group(1))
             fmt = args.group(2)
 
-            if fmt not in size_modifiers.keys() + ["i"]:
+            if fmt not in size_modifiers.keys() and fmt is not "i":
                 if fmt:
                     info("fmt %s is not an option" % fmt)
                 fmt = "w"
@@ -557,9 +561,31 @@ class ProcessWrapper:
 
         # special case, disassemble and return early
         if fmt == "i":
-            bytesread = self.ptraceProcess.readBytes(address, count)
-            print(pwn.disasm(bytesread))
-            return
+            lines=[]
+            count_read=count
+            grow_factor= .5
+            while True:
+                count_read= int(count_read*(1+grow_factor))
+                try:
+                    bytesread = self.ptraceProcess.readBytes(address, count_read)
+                except PtraceError as e:    # incase we cant read count*1.5 bytes because memory isnt mapped
+                    print(e)                # this is shitty code, but it should almost never occur
+                    if grow_factor <= .5**(2*6):
+                        count//=2
+                        grow_factor=0.5
+                    count_read= count
+                    grow_factor= grow_factor**2
+                    continue
+
+                lines= pwn.disasm(bytesread, byte=False, vma=address).splitlines(keepends=True)
+
+                # keep reading more bytes until we cleanly disassemlbe COUNT instructions
+                if any(".byte" in line for line in lines[:count]):
+                    continue
+                else:
+                    return "".join(lines)
+
+
 
         size, unpack_fmt = size_modifiers[fmt]
         unpack_fmt = "<" + unpack_fmt

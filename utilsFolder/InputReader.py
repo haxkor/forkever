@@ -24,7 +24,7 @@ class InputReader(Thread):
         for line in iter(stdin.readline, ""):
             if line == b"\n":
                 line=lastcmd
-            else:
+            elif not line.startswith(b"?"):
                 lastcmd=line
             self.stdinQ.put(line.decode())
 

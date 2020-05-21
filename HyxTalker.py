@@ -33,7 +33,18 @@ class HyxTalker():
 
 
     def launchHyx(self, heapobj: Heap):
-        """ open new Hyx Window"""
+        """open a segment with Hyx. You can specify the permissions of the segment, default is rwp.
+    You can use slicing syntax, [1:-3] will open the segment starting with an offset of 0x1000
+    You can also trim the segment to start at the first page that has some non-zero bytes in it.
+
+    Example use:
+    hyx heap [2:]
+    hyx stack [i:i]
+    hyx libc rp
+    """
+        # this docstring shouldnt really be here, but i dont want the
+        # helper to import from inputhandler to avoid import loop
+
         def argsStr(args):
             return "".join(arg + " " for arg in args)
 

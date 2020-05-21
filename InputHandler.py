@@ -11,6 +11,7 @@ from HeapClass import Heap, MemorySegmentInitArgs
 from ProcessWrapper import ProcessWrapper
 from HyxTalker import HyxTalker
 from utilsFolder.Parsing import parseInteger
+from Helper import Helper
 
 
 class InputHandler:
@@ -103,6 +104,10 @@ class InputHandler:
 
             result = manager.getCurrentProcess().get_own_segment(0)
 
+        elif cmd.startswith("?"):
+            Helper._help(cmd)
+
+
         return result if result else ""
 
     def inputLoop(self):
@@ -148,7 +153,10 @@ class InputHandler:
 
         if event == SIGWINCH:
             return
-        print(self.execute(cmd))
+
+        result=self.execute(cmd)
+        if result:
+            print(result)
 
     def handle_hyx(self, event):
         hyxtalker = self.hyxTalker
@@ -189,6 +197,14 @@ class InputHandler:
         self.hyxTalker = None
 
     def init_hyx(self, cmd="heap rw"):
+        """open a segment with Hyx. You can specify the permissions of the segment, default is rwp.
+       You can use slicing syntax, [1:-3] will open the segment starting with an offset of 0x1000
+       You can also trim the segment to start at the first page that has some non-zero bytes in it.
+
+       Example use:
+       hyx heap [2:]
+       hyx stack [i:i]
+       hyx libc rp"""
         currentProcess = self.manager.getCurrentProcess()
         args = INIT_HYX_ARGS.match(cmd)
 
