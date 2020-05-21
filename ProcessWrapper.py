@@ -362,13 +362,14 @@ class ProcessWrapper:
     def malloc(self, n):
         return self.callFunction("plt.malloc", n)
 
-    def free(self, pointer, force=False):
+    def free(self, pointer):
         return self.callFunction("plt.free", pointer)
 
     def singlestep(self):
         return self.cont(singlestep=True)
 
     def cont(self, signum=0, singlestep=False):
+        """continue execution of the process"""
 
         proc = self.ptraceProcess
 

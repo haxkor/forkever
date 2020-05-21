@@ -43,13 +43,8 @@ class Heap:
         if len(heapmap) == 0:
             raise ValueError("no segment with that name found")
 
-        #        filter_func = lambda mapping: all(perm_letter in mapping.permissions
-        #                                          for perm_letter in self.permissions)
-
-        def filter_func(mapping):
-            my_perms= sorted(self.args.permissions)
-            map_perms= sorted(mapping.permissions.replace("-",""))
-            return my_perms == map_perms
+        my_perms= sorted(self.args.permissions)
+        filter_func = lambda mapping: my_perms == sorted(mapping.permissions.replace("-",""))
 
         heapmap = list(filter(filter_func, heapmap))
         if len(heapmap) == 0:

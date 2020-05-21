@@ -7,6 +7,7 @@ from ptrace.func_call import FunctionCallOptions
 
 from Constants import path_launcher
 from signal import SIGCHLD
+from re import compile as compile_regex
 
 hyx_path = "/"
 
@@ -74,6 +75,8 @@ class ProcessManager:
         self.getCurrentProcess().tryFunction(funcname, *args)
 
     def fork(self):
+        """fork the current process and switch to it.
+        print all processes with 'family' """
         procWrap = self.getCurrentProcess()
         child = self.addProcess(procWrap.forkProcess())
         return self.switchProcess(str(child.getPid()))
@@ -84,7 +87,6 @@ class ProcessManager:
 
     def handle_ProcessEvent(self, event):
         def handle_Exit():
-
             procWrap = self.getCurrentProcess()
             procWrap.is_terminated = True
             if procWrap.parent:
@@ -98,7 +100,6 @@ class ProcessManager:
 
         if isinstance(event, ProcessExit):
             return handle_Exit()
-
         else:
             raise NotImplementedError
 
@@ -172,18 +173,34 @@ class ProcessManager:
         return self.getCurrentProcess().examine(cmd)
 
     def trace_syscall(self,cmd:str):
+        """trace a specified syscall, which means that the program will halt
+        whenever the syscall is called/returns.
+        usage:  trace fork   /   trace not fork"""
         _,_,cmd= cmd.partition(" ")
         from ptrace.syscall.ptrace_syscall import SYSCALL_NAMES
         cmd=cmd.strip()
+        cmd_match = TRACE_SYSCALL_ARGS.match(cmd)
+        delete= bool(cmd_match.group(1))    # if "not" is present, delete
+        which = cmd_match.group(2)
 
-        if cmd in SYSCALL_NAMES.values():
-            self.syscalls_to_trace.append(cmd)
-        elif "?" in cmd:
-            return "possible syscalls" + " ".join(SYSCALL_NAMES.keys())
+        syscall_list = self.syscalls_to_trace
+
+        if delete:
+            if which in syscall_list:
+                syscall_list.remove(which)
+            else:
+                return "not found. currently tracing " + " ".join(syscall_list)
+
         else:
-            print(cmd)
-            return "currently tracing " + " ".join(self.syscalls_to_trace)
 
+            if which in SYSCALL_NAMES.values() and which not in syscall_list:
+                syscall_list.append(which)
+            else:
+                return "currently tracing " + " ".join(syscall_list)
+
+
+
+TRACE_SYSCALL_ARGS = compile_regex(r"(not )?([\w]+)")
 
 
 

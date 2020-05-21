@@ -115,6 +115,11 @@ class HyxTalker():
             pass
 
         elif changetype == "length":
+            abort = self.heap.args.start_nonzero or self.heap.args.stop_nonzero
+            if abort:
+                raise NotImplementedError("heapsize changed, "
+                                          "but you are only viewing a slice")
+
             self.sendNewHeap(*changeret)
 
         elif changetype == "bytes":
