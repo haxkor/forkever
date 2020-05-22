@@ -1,23 +1,25 @@
 #include <unistd.h>
 #include <stdio.h>
+#include <sys/personality.h>
+
+#define NO_CHANGE 0xffffffff
 
 volatile int go=0;
+volatile int current_personality=0;
+volatile int add_personality= NO_CHANGE;
 
 int main(int argc, char** argv){
 
-    while(!go){
-        //scanf("%d",&go);
-        printf("d\n");
+    printf("flag= %x\n", ADDR_NO_RANDOMIZE);
 
-        volatile float junk=0.123;
-        for (volatile int i=0; i<0xFFffFF; i++){
-            junk=junk*junk*(0.5-junk);
-        }
-    }
+    current_personality=personality(NO_CHANGE);
 
-    printf("exited loop");
+    while( add_personality == NO_CHANGE){}
+
+    personality(current_personality | add_personality);
+
+    printf("launching\nadd_personality= %#x", add_personality);
 
     execve(argv[1],argv + 1,0);
-
 }
 

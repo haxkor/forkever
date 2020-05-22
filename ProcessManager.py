@@ -1,4 +1,4 @@
-from ProcessWrapper import ProcessWrapper
+from ProcessWrapper import ProcessWrapper, LaunchArguments
 from ptrace.debugger.process_event import ProcessEvent, ProcessExit
 
 from ptrace.debugger import PtraceDebugger
@@ -11,19 +11,17 @@ from re import compile as compile_regex
 
 hyx_path = "/"
 
-socketname = "/tmp/paulasock"
 
 from utilsFolder.PaulaPoll import PaulaPoll
 
 
 class ProcessManager:
-    def __init__(self, path_to_hack, socketname: str, pollobj: PaulaPoll):
-        self.socketname = socketname
+    def __init__(self, args:LaunchArguments, pollobj: PaulaPoll):
         self.pollobj = pollobj  # PollObj used by the input monitor, needed to register new processes
         self.syscalls_to_trace=[]
 
         self.processList = []
-        self.debugger = self.startDebugger([path_launcher, path_to_hack])
+        self.debugger = self.startDebugger(args)
         self.currentProcess = self.processList[0]
 
         self.syscall_options = FunctionCallOptions(

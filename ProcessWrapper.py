@@ -6,7 +6,6 @@ from mmap import PROT_EXEC, PROT_READ, PROT_WRITE, MAP_PRIVATE, MAP_ANONYMOUS
 from ptrace.debugger.process import PtraceProcess, PtraceError
 from ptrace.debugger.process_event import ProcessExecution, ProcessEvent
 from subprocess import Popen
-from utilsFolder.utils import path_launcher
 from ptrace.debugger.ptrace_signal import ProcessSignal
 from signal import SIGTRAP
 
@@ -14,16 +13,23 @@ from HeapClass import Heap
 
 from ptrace.func_call import FunctionCallOptions
 from Constants import (RELATIVE_ADRESS_THRESHOLD, PRINT_BORING_SYSCALLS, logfile,
-                       SIGNALS_IGNORE)
+                       SIGNALS_IGNORE, path_launcher)
 
 from utilsFolder.Parsing import parseInteger, parseBytes
 
-from struct import iter_unpack
+from struct import iter_unpack, pack
 
 import pwn
 
 from utilsFolder.ProgramInfo import ProgramInfo
 from logging2 import warning, info
+
+
+class LaunchArguments:
+
+    def __init__(self, path: str, random: bool):
+        self.path = path
+        self.random = random
 
 
 class ProcessWrapper:
@@ -50,6 +56,9 @@ class ProcessWrapper:
         if args:
             assert debugger is not None
             assert not parent
+
+            self.disable_randomization = not args.random
+
             # create three pseudo terminals
             self.in_pipe = Pipe()
             self.out_pipe = Pipe()
@@ -67,6 +76,7 @@ class ProcessWrapper:
                 stdout_arg = None
                 stderr_arg = None
 
+            args = [path_launcher, args.path]
             self.popen_obj = Popen(args, stdin=self.in_pipe.readobj, stdout=stdout_arg, stderr=stderr_arg)
 
             self.debugger = debugger
@@ -113,21 +123,24 @@ class ProcessWrapper:
         ptrace_proc.interrupt()  # seize does not automatically interrupt the process
         ptrace_proc.setoptions(self.debugger.options)
 
-        print("launching")
-
+        # as soon as this variable is changed, process will launch. Here you can alter the process' personality
         launcher_ELF = pwn.ELF(path_launcher, False)  # get ready to launch
-        ad = launcher_ELF.symbols["go"]
-        ptrace_proc.writeBytes(ad, b"x")
+        ad = launcher_ELF.symbols["add_personality"]
+
+        add_personality = 0
+        if self.disable_randomization:
+            add_personality += 0x40000
+        add_personality = pack("<I", add_personality)
+        ptrace_proc.writeBytes(ad, add_personality)
 
         ptrace_proc.cont()
         event = ptrace_proc.waitEvent()
-        assert isinstance(event, ProcessExecution), event  # execve syscall is hit
+        assert isinstance(event, ProcessExecution), str(event)  # execve syscall is hit
 
         ptrace_proc.syscall()
         ptrace_proc.waitSyscall()
         result = ptrace_proc.getreg("orig_rax")
-
-        print("initial execve returned %d" % result)
+        assert result == 59, "execve syscall failed"
 
         return ptrace_proc
 
@@ -262,6 +275,7 @@ class ProcessWrapper:
 
     def getFamily(self):
         """print all children of the process"""
+
         def getRepr(procWrap: ProcessWrapper):
             return str(procWrap.getPid())
 
@@ -561,31 +575,29 @@ class ProcessWrapper:
 
         # special case, disassemble and return early
         if fmt == "i":
-            lines=[]
-            count_read=count
-            grow_factor= .5
+            lines = []
+            count_read = count
+            grow_factor = .5
             while True:
-                count_read= int(count_read*(1+grow_factor))
+                count_read = int(count_read * (1 + grow_factor))
                 try:
                     bytesread = self.ptraceProcess.readBytes(address, count_read)
-                except PtraceError as e:    # incase we cant read count*1.5 bytes because memory isnt mapped
-                    print(e)                # this is shitty code, but it should almost never occur
-                    if grow_factor <= .5**(2*6):
-                        count//=2
-                        grow_factor=0.5
-                    count_read= count
-                    grow_factor= grow_factor**2
+                except PtraceError as e:  # incase we cant read count*1.5 bytes because memory isnt mapped
+                    print(e)  # this is shitty code, but it should almost never occur
+                    if grow_factor <= .5 ** (2 * 6):
+                        count //= 2
+                        grow_factor = 0.5
+                    count_read = count
+                    grow_factor = grow_factor ** 2
                     continue
 
-                lines= pwn.disasm(bytesread, byte=False, vma=address).splitlines(keepends=True)
+                lines = pwn.disasm(bytesread, byte=False, vma=address).splitlines(keepends=True)
 
                 # keep reading more bytes until we cleanly disassemlbe COUNT instructions
                 if any(".byte" in line for line in lines[:count]):
                     continue
                 else:
                     return "".join(lines)
-
-
 
         size, unpack_fmt = size_modifiers[fmt]
         unpack_fmt = "<" + unpack_fmt
@@ -597,8 +609,7 @@ class ProcessWrapper:
         symbol_delta = address - where_ad
         line_pref = lambda offset: where_symbol + "+%#x" % (symbol_delta + offset)
 
-
-        format_str = "  %0" + "%d" % (size * 2) + "x"   # to pad with zeros
+        format_str = "  %0" + "%d" % (size * 2) + "x"  # to pad with zeros
         newLineAfter = 16 // size
 
         result = ""
@@ -621,7 +632,9 @@ class ProcessWrapper:
             result = str(e)
         return result
 
-    def get_own_segment(self, address=0x6f00e1337e000):
+    def get_own_segment(self, address=0x7f00e1337e000):
+        print("adress = %x" % address)
+
         if self.own_segment:
             return self.own_segment
 
@@ -633,6 +646,7 @@ class ProcessWrapper:
         old_code = proc.readBytes(ip, len(inject_syscall_instr))
 
         # prepare mmap syscall
+        MAP_FIXED = 16
         prot = PROT_READ | PROT_WRITE | PROT_EXEC
         mapflags = MAP_ANONYMOUS | MAP_PRIVATE
         length = 0x1000
@@ -652,6 +666,7 @@ class ProcessWrapper:
         proc.waitSyscall()
 
         self.own_segment = proc.getreg("rax")
+        print("result= %x" % self.own_segment)
 
         # restore state
         proc.writeBytes(ip, old_code)

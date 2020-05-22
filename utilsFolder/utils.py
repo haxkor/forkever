@@ -1,7 +1,6 @@
 import ptrace.debugger.process as process
 import os
 import logging2
-import pwn
 
 
 
@@ -40,9 +39,7 @@ tmppath = "/tmp/paula-%s/" % timestamp()
 os.mkdir(tmppath)
 
 from ptrace.tools import locateProgram
-path_launcher = "launcher/dummylauncher"
 #path_launcher = locateProgram("launcher/dummylauncher")
 
 
-print(path_launcher)
 

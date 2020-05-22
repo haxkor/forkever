@@ -8,17 +8,17 @@ from threading import Thread
 from utilsFolder.InputReader import InputReader
 from HeapClass import Heap, MemorySegmentInitArgs
 
-from ProcessWrapper import ProcessWrapper
+from ProcessWrapper import ProcessWrapper, LaunchArguments
 from HyxTalker import HyxTalker
 from utilsFolder.Parsing import parseInteger
-from Helper import Helper
+from Helper import my_help
 
 
 class InputHandler:
 
-    def __init__(self, path_to_hack, startupfile=None):
+    def __init__(self, launch_args:LaunchArguments, startupfile=None):
         self.inputPoll = PaulaPoll()
-        self.manager = ProcessManager(path_to_hack, "/tmp/paulasock", self.inputPoll)
+        self.manager = ProcessManager(launch_args, self.inputPoll)
 
         self.stdinQ = PollableQueue()
         self.inputPoll.register(self.stdinQ.fileno(), "userinput")
@@ -102,20 +102,21 @@ class InputHandler:
         elif cmd.startswith("getsegment"):
             _,_, cmd= cmd.partition(" ")
 
-            result = manager.getCurrentProcess().get_own_segment(0)
+            result = manager.getCurrentProcess().get_own_segment()
 
         elif cmd.startswith("?"):
-            Helper._help(cmd)
+            my_help(cmd)
+
+        else:
+            result= "use ? for a list of available commands"
 
 
         return result if result else ""
 
     def inputLoop(self):
 
-        quit_var = False
-        while not quit_var:
+        while True:
             pollresult = self.inputPoll.poll()
-            # print(Numerik partieller Diffepollresult)
             assert len(pollresult) > 0
 
             if len(pollresult) == 1:
@@ -135,6 +136,8 @@ class InputHandler:
                     if "-out" in name:
                         self.handle_procout(name, pollfd, event)
                         break
+                    elif "-err" in name:
+                        self.handle_stderr(name,pollfd, event)
 
                 print(pollresult)
                 # raise NotImplementedError
@@ -266,14 +269,10 @@ INIT_HYX_ARGS = re.compile(
 )
 
 if __name__ == "__main__":
-    from utilsFolder import utils
-
-    # path_to_hack = "/home/jasper/university/barbeit/utilstest/cprograms/mallocinfgets"
-    # path_to_hack= "/home/jasper/university/barbeit/syscalltrap/t2"
-
-    # path_to_hack = "/home/jasper/university/barbeit/utilstest/infgets"
     path_to_hack = "/home/jasper/university/barbeit/dummy/a.out"
     path_to_hack = "/home/jasper/university/barbeit/dummy/minimalloc"
+    from ProcessWrapper import LaunchArguments
+    args=LaunchArguments(path_to_hack, False)
 
-    i = InputHandler(path_to_hack)
+    i = InputHandler(args)
     i.inputLoop()

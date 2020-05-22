@@ -1,28 +1,23 @@
-
 import pwn
-pwn.context.log_level="ERROR"
+pwn.context.log_level = "ERROR"
 
-from Constants import logfile
 from argparse import ArgumentParser
 from ptrace.tools import locateProgram
 from InputHandler import InputHandler
-from os import kill
-from signal import SIGKILL
-
-from contextlib import redirect_stdout
+from ProcessWrapper import LaunchArguments
 
 print(pwn.log)
 
-
-parser=ArgumentParser()
+parser = ArgumentParser()
 parser.add_argument("program")
 parser.add_argument("-init")
+parser.add_argument("-rand", action="store_false")
 
-args=parser.parse_args()
-abspath= locateProgram(args.program)
+args = parser.parse_args()
+abspath = locateProgram(args.program)
+launch_args = LaunchArguments(abspath,args.rand)
 
-handler= InputHandler(abspath, startupfile=args.init)
-
+handler = InputHandler(launch_args, startupfile=args.init)
 
 try:
     handler.inputLoop()
@@ -30,7 +25,3 @@ except KeyboardInterrupt:
     handler.manager.debugger.quit()
 
     exit(1)
-
-
-
-

@@ -23,15 +23,13 @@ help_dict = {
 
 
 
-class Helper:
 
-    @staticmethod
-    def _help(cmd: str):
-        _, _, cmd = cmd.partition("?")
+def my_help(cmd: str):
+    _, _, cmd = cmd.partition("?")
 
-        cmd = cmd.strip()
+    cmd = cmd.strip()
 
-        if cmd in help_dict:
-            help(help_dict[cmd])
-        else:
-            print(" ".join(help_dict.keys()))
+    if cmd in help_dict:
+        help(help_dict[cmd])
+    else:
+        print(" ".join(help_dict.keys()))
