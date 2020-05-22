@@ -103,7 +103,8 @@ class ProcessWrapper:
             self.copyBreakpoints()
 
             self.heap = None
-            self.programinfo = parent.programinfo
+            self.programinfo = ProgramInfo(self.programinfo.path_to_hack,
+                                           self.ptraceProcess.pid, self)
 
     def copyBreakpoints(self):
         from ptrace.debugger.process import Breakpoint
@@ -124,6 +125,7 @@ class ProcessWrapper:
         ptrace_proc.setoptions(self.debugger.options)
 
         # as soon as this variable is changed, process will launch. Here you can alter the process' personality
+        # warning: right now you can only SET flags, you CANNOT UNSET them
         launcher_ELF = pwn.ELF(path_launcher, False)  # get ready to launch
         ad = launcher_ELF.symbols["add_personality"]
 
@@ -154,9 +156,6 @@ class ProcessWrapper:
     def readMappings(self):
         return self.ptraceProcess.readMappings()
 
-    def getPieAdress(self, reload=False):
-        maps = self.readMappings()
-
     def writeToBuf(self, text):
         """write to the processes stdin.
         Note that it isnt directly written to its stdin, but instead written to an internal buffer.
@@ -181,7 +180,7 @@ class ProcessWrapper:
             self.stderr_buf += ret
             return ret
         else:
-            raise KeyError
+            raise ValueError
 
     def getfileno(self, which):
         if which == "err":
@@ -286,7 +285,6 @@ class ProcessWrapper:
 
     def insertBreakpoint(self, adress):
         adress = parseInteger(adress, self)
-        print("setting breakpoint at %x" % adress)
 
         if adress is None:
             return

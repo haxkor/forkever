@@ -4,6 +4,7 @@ from ptrace.debugger.process_event import ProcessEvent, ProcessExit
 from ptrace.debugger import PtraceDebugger
 
 from ptrace.func_call import FunctionCallOptions
+from ptrace.debugger.process import ProcessError
 
 from Constants import path_launcher
 from signal import SIGCHLD
@@ -82,7 +83,11 @@ class ProcessManager:
 
     def addBreakpoint(self, cmd):
         _, _, cmd = cmd.partition(" ")
-        return self.getCurrentProcess().insertBreakpoint(cmd)
+        try:
+            self.getCurrentProcess().insertBreakpoint(cmd)
+        except ProcessError as e:
+            return str(e).split(":")[0]   # happens if breakpoint is already set
+
 
     def _handle_ProcessEvent(self, event):
         def handle_Exit():

@@ -22,9 +22,32 @@ help_dict = {
 }
 
 
+def available_commands():
+    """
+    fork 
+    continue
+    single
+    call
+    print
+    xamine
+    malloc
+    free
+    breakpoint
+    family
+    write
+    maps
+    trace
+    switch
+    hyx
+
+    Type ?command to get a detailed description"""
+
+    pass
+
 
 
 def my_help(cmd: str):
+
     _, _, cmd = cmd.partition("?")
 
     cmd = cmd.strip()
@@ -32,4 +55,4 @@ def my_help(cmd: str):
     if cmd in help_dict:
         help(help_dict[cmd])
     else:
-        print(" ".join(help_dict.keys()))
+        help(available_commands)

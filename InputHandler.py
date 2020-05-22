@@ -115,6 +115,7 @@ class InputHandler:
 
     def inputLoop(self):
 
+        print("type ? for help")
         while True:
             pollresult = self.inputPoll.poll()
             assert len(pollresult) > 0
