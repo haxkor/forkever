@@ -23,6 +23,7 @@ import pwn
 
 from utilsFolder.ProgramInfo import ProgramInfo
 from logging2 import warning, info
+import re
 
 
 class LaunchArguments:
@@ -31,6 +32,13 @@ class LaunchArguments:
         self.path = path
         self.random = random
 
+
+PRINT_ARGS_REGEX = re.compile(r"([0-9]*)"
+                              r"([ighbw]?)")
+
+write_arg_regex = re.compile(r"(b\"[\w\W]*\"|b\'[\w\W]*\')|([\w\W]*)")
+
+inject_syscall_instr = pwn.asm("syscall", arch="amd64")
 
 class ProcessWrapper:
     """Provides an easy way to redirect stdout and stderr using pipes. Write to the processes STDIN and read from STDOUT at any time! """
@@ -156,12 +164,23 @@ class ProcessWrapper:
     def readMappings(self):
         return self.ptraceProcess.readMappings()
 
-    def writeToBuf(self, text):
+    def writeToBuf(self, text:str):
         """write to the processes stdin.
+        Use:
+        w AA
+        w b"\x41\x41\n"
+        w b'AA'     (no newline added)
+        If you write a normal string, a newline is added at the end.
         Note that it isnt directly written to its stdin, but instead written to an internal buffer.
         Upon a read syscall (trying to consume from stdin), the buffers contents are written to the actual stdin.
         This means that if you write to stdin and fork before consumption, both processes will get to consume
         what you have previously written."""
+        match= write_arg_regex.match(text)
+
+        text= (match.group(2) + "\n").encode() if match.group(2) else eval(match.group(1))
+        assert isinstance(text,bytes)
+        print("writing ", text)
+
         self.stdin_buf += text
 
     def writeBufToPipe(self, n: int):
@@ -630,13 +649,22 @@ class ProcessWrapper:
             result = str(e)
         return result
 
-    def get_own_segment(self, address=0x7f00e1337e000):
-        print("adress = %x" % address)
-
+    def get_own_segment(self, address=None):  #  0x7f00e1337e000
+        """injects an MMAP syscall so we get our own page for code"""
         if self.own_segment:
             return self.own_segment
 
+        stop= self.programinfo.getElfStop()
+        address = address if address else stop + 0x2000
+
+        print("adress = %x" % address)
         proc = self.ptraceProcess
+
+        if proc.syscall_state.next_event == "exit":
+            print("about to call syscall, returning")
+            return
+
+
 
         # save state
         ip = proc.getInstrPointer()
@@ -644,9 +672,9 @@ class ProcessWrapper:
         old_code = proc.readBytes(ip, len(inject_syscall_instr))
 
         # prepare mmap syscall
-        MAP_FIXED = 16
+        MAP_FIXED_NOREPLACE = 1048576
         prot = PROT_READ | PROT_WRITE | PROT_EXEC
-        mapflags = MAP_ANONYMOUS | MAP_PRIVATE
+        mapflags = MAP_ANONYMOUS | MAP_PRIVATE  | MAP_FIXED_NOREPLACE
         length = 0x1000
 
         fill_regs = ["rax", "rdi", "rsi", "rdx", "r10", "r8", "r9"]  # calling convention for syscalls
@@ -673,9 +701,4 @@ class ProcessWrapper:
         return self.own_segment
 
 
-import re
 
-PRINT_ARGS_REGEX = re.compile(r"([0-9]*)"
-                              r"([ighbw]?)")
-
-inject_syscall_instr = pwn.asm("syscall", arch="amd64")

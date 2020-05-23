@@ -5,7 +5,7 @@ from signal import SIGWINCH
 import re
 
 from threading import Thread
-from utilsFolder.InputReader import InputReader
+from utilsFolder.InputReader import InputReader, InputSockReader
 from HeapClass import Heap, MemorySegmentInitArgs
 
 from ProcessWrapper import ProcessWrapper, LaunchArguments
@@ -16,13 +16,14 @@ from Helper import my_help
 
 class InputHandler:
 
-    def __init__(self, launch_args:LaunchArguments, startupfile=None):
+    def __init__(self, launch_args:LaunchArguments, startupfile=None, inputsock=False):
         self.inputPoll = PaulaPoll()
         self.manager = ProcessManager(launch_args, self.inputPoll)
 
         self.stdinQ = PollableQueue()
         self.inputPoll.register(self.stdinQ.fileno(), "userinput")
         self.reader_thread = InputReader(self.stdinQ, startupfile)
+        self.sock_reader = InputSockReader(self.stdinQ)
 
         self.hyxTalker = None
 
@@ -46,7 +47,8 @@ class InputHandler:
             result = manager.cont()
 
         elif cmd.startswith("w"):
-            result = manager.write(cmd[2:].encode() + b"\n")  # TODO
+            _,_, cmd = cmd.partition(" ")
+            result = manager.write(cmd)
 
         elif cmd.startswith("fork"):
             result = self.fork()
@@ -194,7 +196,11 @@ class InputHandler:
     def handle_procout(self, name, fd, event):
         procWrap = self.manager.getCurrentProcess()
         assert isinstance(procWrap, ProcessWrapper)
-        print("proc %s wrote: " % name, procWrap.out_pipe.read(4096))
+        read_bytes = procWrap.out_pipe.read(4096)
+        if self.sock_reader:
+            self.sock_reader.acc_sock.send(read_bytes)
+
+        print("proc %s wrote: %s" % (name, read_bytes))
 
     def delete_hyx(self):
         self.hyxTalker.destroy(rootsock=True)

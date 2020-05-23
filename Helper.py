@@ -1,6 +1,7 @@
 from ProcessWrapper import ProcessWrapper
 from ProcessManager import ProcessManager
 from HyxTalker import HyxTalker
+
 help_dict = {
     "fork": ProcessWrapper.forkProcess,
     "continue": ProcessWrapper.cont,
@@ -45,11 +46,8 @@ def available_commands():
     pass
 
 
-
 def my_help(cmd: str):
-
     _, _, cmd = cmd.partition("?")
-
     cmd = cmd.strip()
 
     if cmd in help_dict:
