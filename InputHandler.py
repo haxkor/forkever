@@ -16,7 +16,7 @@ from Helper import my_help
 
 class InputHandler:
 
-    def __init__(self, launch_args:LaunchArguments, startupfile=None, inputsock=False):
+    def __init__(self, launch_args: LaunchArguments, startupfile=None, inputsock=False):
         self.inputPoll = PaulaPoll()
         self.manager = ProcessManager(launch_args, self.inputPoll)
 
@@ -36,18 +36,18 @@ class InputHandler:
     def _execute(self, cmd):
         manager = self.manager
         procWrap = manager.getCurrentProcess()
-        proc= procWrap.ptraceProcess
+        proc = procWrap.ptraceProcess
 
         result = ""
         if cmd.startswith("hyx") and not self.hyxTalker:
             _, _, cmd = cmd.partition(" ")
-            result=self.init_hyx(cmd)
+            result = self.init_hyx(cmd)
 
         elif cmd.startswith("c"):  # continue
             result = manager.cont()
 
         elif cmd.startswith("w"):
-            _,_, cmd = cmd.partition(" ")
+            _, _, cmd = cmd.partition(" ")
             result = manager.write(cmd)
 
         elif cmd.startswith("fork"):
@@ -102,7 +102,7 @@ class InputHandler:
             result = manager.trace_syscall(cmd)
 
         elif cmd.startswith("getsegment"):
-            _,_, cmd= cmd.partition(" ")
+            _, _, cmd = cmd.partition(" ")
 
             result = manager.getCurrentProcess().get_own_segment()
 
@@ -110,20 +110,12 @@ class InputHandler:
             my_help(cmd)
 
         else:
-            result= "use ? for a list of available commands"
-
+            result = "use ? for a list of available commands"
 
         return result if result else ""
 
-    def inputLoop(self):
-        try:
-            self._inputLoop()
-        except KeyboardInterrupt:
-            self.handle_procout(None,None,None)
-            self.handle_stderr(None,None,None)
-            raise KeyboardInterrupt
 
-    def _inputLoop(self):
+    def inputLoop(self):
 
         print("type ? for help")
         while True:
@@ -148,7 +140,7 @@ class InputHandler:
                         self.handle_procout(name, pollfd, event)
                         break
                     elif "-err" in name:
-                        self.handle_stderr(name,pollfd, event)
+                        self.handle_stderr(name, pollfd, event)
 
                 print(pollresult)
                 # raise NotImplementedError
@@ -168,7 +160,7 @@ class InputHandler:
         if event == SIGWINCH:
             return
 
-        result=self.execute(cmd)
+        result = self.execute(cmd)
         if result:
             print(result)
 
@@ -234,7 +226,7 @@ class InputHandler:
         permissions = args.group(2)
 
         # if sliceoffsets are specified, convert the strings to int
-        convert_func = lambda slice_str: int(slice_str, 16)*0x1000 if slice_str else 0
+        convert_func = lambda slice_str: int(slice_str, 16) * 0x1000 if slice_str else 0
         start, stop = map(convert_func, [args.group(4), args.group(6)])
 
         if not segment:
@@ -276,8 +268,8 @@ INIT_HYX_ARGS = re.compile(
     r"([\w./-]+)?"  # name of library
     r" ([rwxps]+)?"  # permissions
     r"( ?\["  # slicing
-    r"([0-9a-fA-F]*)"   
-    r"(i?)" # i for start_nonzero
+    r"([0-9a-fA-F]*)"
+    r"(i?)"  # i for start_nonzero
     r":"
     r"(-?[0-9a-fA-F]*)"
     r"(i?)"
@@ -288,7 +280,8 @@ if __name__ == "__main__":
     path_to_hack = "/home/jasper/university/barbeit/dummy/a.out"
     path_to_hack = "/home/jasper/university/barbeit/dummy/minimalloc"
     from ProcessWrapper import LaunchArguments
-    args=LaunchArguments(path_to_hack, False)
+
+    args = LaunchArguments(path_to_hack, False)
 
     i = InputHandler(args)
     i.inputLoop()

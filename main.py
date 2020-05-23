@@ -24,9 +24,7 @@ try:
     handler.inputLoop()
 except KeyboardInterrupt:
     handler.manager.debugger.quit()
-
     handler.handle_procout(None,None,None)
-
     exit(1)
 except BaseException as e:
     raise e
