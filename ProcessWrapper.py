@@ -12,7 +12,7 @@ from signal import SIGTRAP
 from HeapClass import Heap
 
 from ptrace.func_call import FunctionCallOptions
-from Constants import (RELATIVE_ADRESS_THRESHOLD, PRINT_BORING_SYSCALLS, logfile,
+from Constants import (RELATIVE_ADRESS_THRESHOLD, PRINT_BORING_SYSCALLS,
                        SIGNALS_IGNORE, path_launcher)
 
 from utilsFolder.Parsing import parseInteger, parseBytes
@@ -24,12 +24,16 @@ import pwn
 from utilsFolder.ProgramInfo import ProgramInfo
 from logging2 import warning, info
 import re
-
+from ptrace.tools import locateProgram
+from shutil import which
 
 class LaunchArguments:
 
-    def __init__(self, path: str, random: bool):
-        self.path = path
+    def __init__(self, argvlist, random: bool):
+
+        self.path = locateProgram(argvlist[0])
+        print("path= ",self.path)
+        self.argvlist = argvlist
         self.random = random
 
 
@@ -84,7 +88,7 @@ class ProcessWrapper:
                 stdout_arg = None
                 stderr_arg = None
 
-            args = [path_launcher, args.path]
+            args = [path_launcher] + args.argvlist
             self.popen_obj = Popen(args, stdin=self.in_pipe.readobj, stdout=stdout_arg, stderr=stderr_arg)
 
             self.debugger = debugger
@@ -392,6 +396,8 @@ class ProcessWrapper:
         ip = proc.getInstrPointer()
         finish = inject_at + len(inject_code)  # if ip==finish, call afterCallFunction
 
+
+        info("inject_at= %x" % inject_at)
         proc.writeBytes(inject_at, inject_code)
         proc.setInstrPointer(inject_at)
 
@@ -655,7 +661,7 @@ class ProcessWrapper:
             return self.own_segment
 
         stop= self.programinfo.getElfStop()
-        address = address if address else stop + 0x2000
+        address = address if address else stop + 0x80000
 
         print("adress = %x" % address)
         proc = self.ptraceProcess
@@ -691,13 +697,22 @@ class ProcessWrapper:
         proc.syscall()
         proc.waitSyscall()
 
-        self.own_segment = proc.getreg("rax")
-        print("result= %x" % self.own_segment)
+        result = proc.getreg("rax")
+        print("result= %x" % result)
+        if result > 2**63 - 1:
+            result-= 2**64
+            import errno
+            if errno.EEXIST == -result:
+                print("mapping exists")
+                return self.get_own_segment(address*2)
+
+
 
         # restore state
         proc.writeBytes(ip, old_code)
         proc.setregs(old_regs)
 
+        self.own_segment = result
         return self.own_segment
 
 

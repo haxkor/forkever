@@ -4,6 +4,7 @@ from threading import Thread
 
 
 class InputReader(Thread):
+    """listens for userinput"""
     def __init__(self, stdinQ: PollableQueue, startupfile=None):
         Thread.__init__(self, daemon=True)
         self.stdinQ = stdinQ
@@ -34,6 +35,8 @@ from functools import partial
 import os
 
 class InputSockReader(Thread):
+    """Listens for input for processes STDIN.
+    Output will be sent to the socket as well."""
     def __init__(self, stdinQ: PollableQueue):
         Thread.__init__(self, daemon=True)
         self.stdinQ = stdinQ
@@ -48,12 +51,8 @@ class InputSockReader(Thread):
             pass
 
         self.sock.bind((HOST,PORT))
-        print("listening")
         self.sock.listen(1)
-        print("listened")
         self.acc_sock, _ = self.sock.accept()
-        print("accepted")
-
 
         f= partial(self.acc_sock.recv, 0x1000)
         for line_bytes in iter(f, b""):

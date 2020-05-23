@@ -1,7 +1,7 @@
 from socket import socket, AF_UNIX, SOCK_STREAM
 from subprocess import Popen
 from struct import pack, unpack
-from Constants import hyx_path, runargs
+from Constants import hyx_path, runargs, socketname
 
 from utilsFolder.PaulaPoll import PaulaPoll
 
@@ -15,7 +15,7 @@ import os
 
 
 class HyxTalker():
-    def __init__(self, socketname: str, heapobj: Heap, poll: PaulaPoll):
+    def __init__(self, heapobj: Heap, poll: PaulaPoll):
         self.rootsock = socket(AF_UNIX, SOCK_STREAM)
         self._socketname = socketname
 

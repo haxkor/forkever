@@ -8,6 +8,7 @@ CMD_REQUEST_SUCCESS = b"\x51"
 hyx_path = "/home/jasper/CLionProjects/hyxWIP/hyx-0.1.5/myhyx"
 
 path_launcher = "launcher/launcher"
+socketname= "forkever_hyx_sock"
 
 runargs = ["x-terminal-emulator", "-e"]  # "--hold",
 
@@ -20,8 +21,6 @@ PRINT_OTHER_CANDIDATES = False
 
 HOST = ""
 PORT = 9999
-
-logfile = open("logfile", "w")
 
 from signal import SIGCHLD
 

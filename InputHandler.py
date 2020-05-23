@@ -23,7 +23,7 @@ class InputHandler:
         self.stdinQ = PollableQueue()
         self.inputPoll.register(self.stdinQ.fileno(), "userinput")
         self.reader_thread = InputReader(self.stdinQ, startupfile)
-        self.sock_reader = InputSockReader(self.stdinQ)
+        self.sock_reader = InputSockReader(self.stdinQ) if inputsock else None
 
         self.hyxTalker = None
 
@@ -116,6 +116,14 @@ class InputHandler:
         return result if result else ""
 
     def inputLoop(self):
+        try:
+            self._inputLoop()
+        except KeyboardInterrupt:
+            self.handle_procout(None,None,None)
+            self.handle_stderr(None,None,None)
+            raise KeyboardInterrupt
+
+    def _inputLoop(self):
 
         print("type ? for help")
         while True:
@@ -247,19 +255,20 @@ class InputHandler:
 
         print(heap.file_path)
 
-        self.hyxTalker = HyxTalker(self.manager.socketname, heap, self.inputPoll)
+        self.hyxTalker = HyxTalker(heap, self.inputPoll)
 
     def fork(self):
         manager = self.manager
         currProc = manager.getCurrentProcess()
+
+        # make sure there is a new child after forking, switch to new child
         children_count = len(currProc.children)
         result = manager.fork()
         if len(currProc.children) <= children_count:
             return result
-
         new_child = currProc.children[-1]
-        self.hyxTalker.heap = Heap(new_child)
 
+        self.hyxTalker.heap = Heap(new_child)
         return result
 
 

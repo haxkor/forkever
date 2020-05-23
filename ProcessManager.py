@@ -12,14 +12,13 @@ from re import compile as compile_regex
 
 hyx_path = "/"
 
-
 from utilsFolder.PaulaPoll import PaulaPoll
 
 
 class ProcessManager:
-    def __init__(self, args:LaunchArguments, pollobj: PaulaPoll):
+    def __init__(self, args: LaunchArguments, pollobj: PaulaPoll):
         self.pollobj = pollobj  # PollObj used by the input monitor, needed to register new processes
-        self.syscalls_to_trace=[]
+        self.syscalls_to_trace = []
 
         self.processList = []
         self.debugger = self.startDebugger(args)
@@ -38,14 +37,13 @@ class ProcessManager:
         return proc
 
     def startDebugger(self, args):
-
         debugger = PtraceDebugger()
         debugger.traceFork()
         debugger.traceExec()
         debugger.enableSysgood()  # to differentiate between traps raised by syscall, no syscall
 
         newProcess = ProcessWrapper(args=args, debugger=debugger, redirect=True)  # first process
-        newProcess.syscalls_to_trace= self.syscalls_to_trace
+        newProcess.syscalls_to_trace = self.syscalls_to_trace
         self.addProcess(newProcess)
 
         return debugger
@@ -86,8 +84,7 @@ class ProcessManager:
         try:
             self.getCurrentProcess().insertBreakpoint(cmd)
         except ProcessError as e:
-            return str(e).split(":")[0]   # happens if breakpoint is already set
-
+            return str(e).split(":")[0]  # happens if breakpoint is already set
 
     def _handle_ProcessEvent(self, event):
         def handle_Exit():
@@ -100,12 +97,12 @@ class ProcessManager:
                     return self.switchProcess("up")
                 else:
                     print("all processes exited")
-                    exit(1)
+                    raise KeyboardInterrupt
 
         if isinstance(event, ProcessExit):
             return handle_Exit()
         else:
-            raise NotImplementedError
+            raise event
 
     def cont(self, singlestep=False):
         procWrap = self.getCurrentProcess()
@@ -117,23 +114,23 @@ class ProcessManager:
             except ProcessEvent as event:
                 return self._handle_ProcessEvent(event)
 
-    def switchProcess(self, cmd:str):
-        """ switch ? prints all processes
-            switch up switches to parent
-            switch 137 switches to process 137"""
-        if isinstance(cmd,int):
-            cmd=str(cmd)
+    def switchProcess(self, cmd: str):
+        """ switch ?  prints all processes
+            switch up  switches to parent
+            switch 137  switches to process 137"""
+        if isinstance(cmd, int):
+            cmd = str(cmd)
         if "?" in cmd:
             return self.processList[0].getFamily()
 
-        currProc= self.getCurrentProcess()
+        currProc = self.getCurrentProcess()
         if "up" in cmd:
             if not currProc.parent:
                 return "this is root"
-            pid=currProc.parent.getPid()
-        else:   # look for number
+            pid = currProc.parent.getPid()
+        else:  # look for number
             try:
-                pid=int(cmd)
+                pid = int(cmd)
                 assert pid in list(proc.getPid() for proc in self.processList)
             except (ValueError, AssertionError):
                 return "process not found"
@@ -169,22 +166,21 @@ class ProcessManager:
         procWrap = self.getCurrentProcess()
         procWrap.writeToBuf(text)
 
-
     def print(self, cmd):
         return self.getCurrentProcess().print(cmd)
 
     def examine(self, cmd):
         return self.getCurrentProcess().examine(cmd)
 
-    def trace_syscall(self,cmd:str):
+    def trace_syscall(self, cmd: str):
         """trace a specified syscall, which means that the program will halt
         whenever the syscall is called/returns.
         usage:  trace fork   /   trace not fork"""
-        _,_,cmd= cmd.partition(" ")
+        _, _, cmd = cmd.partition(" ")
         from ptrace.syscall.ptrace_syscall import SYSCALL_NAMES
-        cmd=cmd.strip()
+        cmd = cmd.strip()
         cmd_match = TRACE_SYSCALL_ARGS.match(cmd)
-        delete= bool(cmd_match.group(1))    # if "not" is present, delete
+        delete = bool(cmd_match.group(1))  # if "not" is present, delete
         which = cmd_match.group(2)
 
         syscall_list = self.syscalls_to_trace
@@ -203,10 +199,4 @@ class ProcessManager:
                 return "currently tracing " + " ".join(syscall_list)
 
 
-
 TRACE_SYSCALL_ARGS = compile_regex(r"(not )?([\w]+)")
-
-
-
-
-
