@@ -114,9 +114,7 @@ class InputHandler:
 
         return result if result else ""
 
-
     def inputLoop(self):
-
         print("type ? for help")
         while True:
             pollresult = self.inputPoll.poll()
