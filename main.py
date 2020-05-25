@@ -8,9 +8,10 @@ from ProcessWrapper import LaunchArguments
 print(pwn.log)
 
 p = ArgumentParser()
-p.add_argument("-init")
-p.add_argument("-rand", action="store_true")    # randomization disabled by default
-p.add_argument("-sock", action="store_true")    # no socket by default
+p.add_argument("-init", help="Pass a file for initial commands")
+p.add_argument("-rand", action="store_true",help="to disable randomization")    # randomization disabled by default
+p.add_argument("-sock", action="store_true",
+               help="if you want to communicate with the program via a socket. (Adjust in Constants.py)")    # no socket by default
 p.add_argument("runargs", nargs=REMAINDER)
 
 parsed_args = p.parse_args()

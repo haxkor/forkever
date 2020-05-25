@@ -101,7 +101,7 @@ class ProcessManager:
             return str(e).split(":")[0]  # happens if breakpoint is already set
 
     def _handle_ProcessEvent(self, event):
-        def handle_Exit()
+        def handle_Exit():
             procWrap = self.getCurrentProcess()
             procWrap.is_terminated = True
             if procWrap.parent:
