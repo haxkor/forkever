@@ -57,8 +57,8 @@ class InputHandler:
             print(manager.processList)
 
         elif cmd.startswith("sw"):  # switch
-            _, _, cmd = cmd.partition(" ")
-            result = manager.switchProcess(cmd)
+
+            result = self.switch(cmd)
 
         elif cmd.startswith("b"):
 
@@ -254,12 +254,32 @@ class InputHandler:
         # make sure there is a new child after forking, switch to new child
         children_count = len(currProc.children)
         result = manager.fork()
-        if len(currProc.children) <= children_count:
-            return result
-        new_child = currProc.children[-1]
+        if len(currProc.children) > children_count:
+            self._switch_hyxtalker()
 
-        self.hyxTalker.heap = Heap(new_child)
         return result
+
+    def switch(self, cmd):
+        manager = self.manager
+        _, _, cmd = cmd.partition(" ")
+        result = manager.switchProcess(cmd)
+        self._switch_hyxtalker()
+
+        return result
+
+    def _switch_hyxtalker(self):
+        if not self.hyxTalker:
+            return
+
+        newProc = self.manager.getCurrentProcess()
+        if newProc.heap:
+            newHeap= newProc.heap
+        else:
+            args = self.hyxTalker.heap.args
+            newHeap = Heap(newProc, args)
+
+        self.hyxTalker.heap = newHeap
+        self.hyxTalker.sendNewHeap(newHeap.start, newHeap.stop)
 
 
 INIT_HYX_ARGS = re.compile(
@@ -279,7 +299,7 @@ if __name__ == "__main__":
     path_to_hack = "/home/jasper/university/barbeit/dummy/minimalloc"
     from ProcessWrapper import LaunchArguments
 
-    args = LaunchArguments(path_to_hack, False)
+    args = LaunchArguments([path_to_hack], False)
 
     i = InputHandler(args)
     i.inputLoop()

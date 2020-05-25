@@ -96,10 +96,10 @@ class ProgramInfo:
 
             return symbol_ad + offset
 
-    def getElfStop(self):
-        """returns virtual address of where the ELF ends"""
-        stops= [mapping.end for mapping in getMappings(self.pid, self.path_to_hack)]
-        return max(stops)
+    def getElfStart(self):
+        """returns virtual address of where the ELF starts"""
+        starts= [mapping.start for mapping in getMappings(self.pid, self.path_to_hack)]
+        return min(starts)
 
 
     def where(self, ip: int):

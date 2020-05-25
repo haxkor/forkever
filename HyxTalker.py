@@ -58,7 +58,7 @@ class HyxTalker():
             args = runargs + args
             self.hyxprocess = Popen(args)
         else:
-            pref = ["gdb -ex \"b updater.c:getUpdates_fromPaula_insert\"  --args"]
+            pref = ["gdb -ex \"b updater.c:requestCommandPaula\"  --args"]
             print(argsStr(pref+args))  # incase spawning new window isnt possible
 
         self.rootsock.listen(1)
@@ -154,9 +154,9 @@ class HyxTalker():
         cmd = cmd[:0x100]
         self.hyxsock.send(cmd.ljust(0x100, b"\x00"))
 
+
     def destroy(self, rootsock=False):
         self.poll.unregister(self.getSockFd())
         self.hyxsock.close()
-        self.hyxprocess.kill()
         if rootsock:
             self.rootsock.close()

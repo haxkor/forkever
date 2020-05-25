@@ -41,7 +41,7 @@ class Heap:
     def getStartStop(self):
         heapmap = getMappings(self.pid, self.args.path)
         if len(heapmap) == 0:
-            raise ValueError("no segment with that name found")
+            raise ValueError("no segment with that name found" + self.args.path)
 
         my_perms= sorted(self.args.permissions)
         filter_func = lambda mapping: my_perms == sorted(mapping.permissions.replace("-",""))

@@ -112,18 +112,27 @@ class ProcessWrapper:
 
             self.debugger = parent.debugger
             self.ptraceProcess = ptraceprocess
-            self.copyBreakpoints()
+            self._copyBreakpoints()
 
             self.heap = None
-            self.programinfo = ProgramInfo(self.programinfo.path_to_hack,
+            self.programinfo = ProgramInfo(parent.programinfo.path_to_hack,
                                            self.ptraceProcess.pid, self)
 
-    def copyBreakpoints(self):
+    def _copyBreakpoints(self):
+        """this is used to creaty new breakpoint python objects for a forked process"""
+        print("cloning breakpoints")
         from ptrace.debugger.process import Breakpoint
+        print(self.parent.ptraceProcess.breakpoints)
         for bp in self.parent.ptraceProcess.breakpoints.values():
+            print("bp=", bp)
             assert isinstance(bp, Breakpoint)
             new_bp = self.ptraceProcess.createBreakpoint(bp.address)
             new_bp.old_bytes = bp.old_bytes
+
+        # cover edge case where we just ran into a breakpoint (bp has been temporarily disabled)
+        ip= self.parent.remember_insert_bp
+        if ip:  # this var stores the address of where the bp has to be inserted
+            self.insertBreakpoint(ip)
 
     def getHeap(self):
         return self.heap
@@ -307,12 +316,17 @@ class ProcessWrapper:
         return format_tree(self, getRepr, getChildren)
 
     def insertBreakpoint(self, adress):
-        adress = parseInteger(adress, self)
+        if not isinstance(adress,int):
+            adress = parseInteger(adress, self)
 
         if adress is None:
             return
 
-        return self.ptraceProcess.createBreakpoint(adress)
+        print(self.ptraceProcess.breakpoints)
+        result= self.ptraceProcess.createBreakpoint(adress)
+
+        print(self.ptraceProcess.breakpoints)
+        return result
 
     def reinstertBreakpoint(self):
         """makes sure that breakpoints are reinserted"""
@@ -660,8 +674,8 @@ class ProcessWrapper:
         if self.own_segment:
             return self.own_segment
 
-        stop= self.programinfo.getElfStop()
-        address = address if address else stop + 0x80000
+        start= self.programinfo.getElfStart()
+        address = address if address else start - 0x2000
 
         print("adress = %x" % address)
         proc = self.ptraceProcess
@@ -680,7 +694,7 @@ class ProcessWrapper:
         # prepare mmap syscall
         MAP_FIXED_NOREPLACE = 1048576
         prot = PROT_READ | PROT_WRITE | PROT_EXEC
-        mapflags = MAP_ANONYMOUS | MAP_PRIVATE  | MAP_FIXED_NOREPLACE
+        mapflags = MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED_NOREPLACE
         length = 0x1000
 
         fill_regs = ["rax", "rdi", "rsi", "rdx", "r10", "r8", "r9"]  # calling convention for syscalls

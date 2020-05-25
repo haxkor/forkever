@@ -10,7 +10,7 @@ hyx_path = "/home/jasper/CLionProjects/hyxWIP/hyx-0.1.5/myhyx"
 path_launcher = "launcher/launcher"
 socketname= "forkever_hyx_sock"
 
-runargs = ["x-terminal-emulator", "-e"]  # "--hold",
+runargs = None# ["x-terminal-emulator", "--hold", "-e"   ]
 
 RELATIVE_ADRESS_THRESHOLD = 0xFFffFFff
 
