@@ -13,6 +13,7 @@ from re import compile as compile_regex
 hyx_path = "/"
 
 from utilsFolder.PaulaPoll import PaulaPoll
+from utilsFolder.Parsing import parseInteger
 
 
 class ProcessManager:
@@ -67,10 +68,26 @@ class ProcessManager:
         """print /proc/pid/maps of current process"""
         return "".join(str(mapping) + "\n" for mapping in self.getCurrentProcess().ptraceProcess.readMappings())
 
-    def tryFunction(self, funcname, args):
-        args = list(int(arg, 16) for arg in args)
+    def tryFunction(self, cmd:str):
+        funcname, _, argstr = cmd.partition(" ")
+        print(funcname, argstr)
+
+        currProc= self.getCurrentProcess()
+        args= [parseInteger(arg,currProc) for arg in argstr.split()]
+
         print("trying function %s with args %s" % (funcname, args))
         self.getCurrentProcess().tryFunction(funcname, *args)
+
+    def callFunction(self, cmd:str):
+        _,_, cmd= cmd.partition(" ")
+        funcname, _, argstr = cmd.partition(" ")
+        print(funcname, argstr)
+
+        currProc = self.getCurrentProcess()
+        args = [parseInteger(arg, currProc) for arg in argstr.split()]
+
+        print("trying function %s with args %s" % (funcname, args))
+        self.getCurrentProcess().callFunction(funcname, *args)
 
     def fork(self):
         """fork the current process and switch to it.

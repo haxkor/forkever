@@ -43,6 +43,10 @@ class InputHandler:
             _, _, cmd = cmd.partition(" ")
             result = self.init_hyx(cmd)
 
+        elif cmd.startswith("call"):
+            result = manager.callFunction(cmd)
+
+
         elif cmd.startswith("c"):  # continue
             result = manager.cont()
 
@@ -78,7 +82,7 @@ class InputHandler:
             result = manager.finish()
 
         elif cmd.startswith("try"):
-            result = manager.tryFunction(cmd.split(" ")[1], cmd.split(" ")[2:])
+            result = manager.tryFunction(cmd)
 
         elif cmd.startswith("list b"):
             print(manager.getCurrentProcess().ptraceProcess.breakpoints)
