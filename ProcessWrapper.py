@@ -371,6 +371,8 @@ class ProcessWrapper:
             breakpoints/syscalls
             Does nothing if the process just entered syscall
 
+            use: call libc:memset $rbp 0x41 0x10
+
             How does is work:
             call mmap to map a page where we can inject code.
             the injected code will call the specified function.
@@ -395,10 +397,10 @@ class ProcessWrapper:
         inject_at = self.get_own_segment()
 
         inject_code = """
-            mov eax, %#x
-            call eax
+            mov rax, %#x
+            call rax
             int3""" % func_ad
-        inject_code = pwn.asm(inject_code)
+        inject_code = pwn.asm(inject_code, arch="amd64")
 
         argregs = ["rdi", "rsi", "rdx", "rcx", "r9", "r8"]  # set new args (depends on calling convention)
         if len(args) > len(argregs):

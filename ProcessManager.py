@@ -55,12 +55,6 @@ class ProcessManager:
     def free(self, pointer):
         return self.callFunction("free", pointer)
 
-    def callFunction(self, funcname, *args, tillResult=False):
-        try:
-            return self.getCurrentProcess().callFunction(funcname, *args, tillResult=tillResult)
-        except ProcessEvent as event:
-            self._handle_ProcessEvent(event)
-
     def malloc(self, val):
         return self.callFunction("malloc", val)
 
@@ -87,7 +81,10 @@ class ProcessManager:
         args = [parseInteger(arg, currProc) for arg in argstr.split()]
 
         print("trying function %s with args %s" % (funcname, args))
-        self.getCurrentProcess().callFunction(funcname, *args)
+        try:
+            return self.getCurrentProcess().callFunction(funcname, *args)
+        except ProcessEvent as event:
+            self._handle_ProcessEvent(event)
 
     def fork(self):
         """fork the current process and switch to it.
@@ -104,7 +101,7 @@ class ProcessManager:
             return str(e).split(":")[0]  # happens if breakpoint is already set
 
     def _handle_ProcessEvent(self, event):
-        def handle_Exit():
+        def handle_Exit()
             procWrap = self.getCurrentProcess()
             procWrap.is_terminated = True
             if procWrap.parent:
