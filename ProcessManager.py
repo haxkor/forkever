@@ -1,7 +1,7 @@
 from ProcessWrapper import ProcessWrapper, LaunchArguments
-from ptrace.debugger.process_event import ProcessEvent, ProcessExit
+from ptrace.debugger.process_event import ProcessEvent, ProcessExit, NewProcessEvent, ProcessExecution
 
-from ptrace.debugger import PtraceDebugger
+from ptrace.debugger import PtraceDebugger, PtraceProcess
 
 from ptrace.func_call import FunctionCallOptions
 from ptrace.debugger.process import ProcessError
@@ -14,6 +14,7 @@ hyx_path = "/"
 
 from utilsFolder.PaulaPoll import PaulaPoll
 from utilsFolder.Parsing import parseInteger
+from Constants import FOLLOW_NEW_PROCS
 
 
 class ProcessManager:
@@ -62,18 +63,18 @@ class ProcessManager:
         """print /proc/pid/maps of current process"""
         return "".join(str(mapping) + "\n" for mapping in self.getCurrentProcess().ptraceProcess.readMappings())
 
-    def tryFunction(self, cmd:str):
+    def tryFunction(self, cmd: str):
         funcname, _, argstr = cmd.partition(" ")
         print(funcname, argstr)
 
-        currProc= self.getCurrentProcess()
-        args= [parseInteger(arg,currProc) for arg in argstr.split()]
+        currProc = self.getCurrentProcess()
+        args = [parseInteger(arg, currProc) for arg in argstr.split()]
 
         print("trying function %s with args %s" % (funcname, args))
         self.getCurrentProcess().tryFunction(funcname, *args)
 
-    def callFunction(self, cmd:str):
-        _,_, cmd= cmd.partition(" ")
+    def callFunction(self, cmd: str):
+        _, _, cmd = cmd.partition(" ")
         funcname, _, argstr = cmd.partition(" ")
         print(funcname, argstr)
 
@@ -100,7 +101,7 @@ class ProcessManager:
         except ProcessError as e:
             return str(e).split(":")[0]  # happens if breakpoint is already set
 
-    def _handle_ProcessEvent(self, event):
+    def _handle_ProcessEvent(self, event:ProcessEvent):
         def handle_Exit():
             procWrap = self.getCurrentProcess()
             procWrap.is_terminated = True
@@ -113,8 +114,43 @@ class ProcessManager:
                     print("all processes exited")
                     raise KeyboardInterrupt
 
+        def handle_NewProcess(event):
+            """this is called if a new process is created by the program (and not artificially by the user)"""
+            new_ptrace_proc = self.debugger.list[-1]  # this process was just spawned
+
+            if FOLLOW_NEW_PROCS:
+                curr_proc = self.getCurrentProcess()
+                new_proc = ProcessWrapper(parent=curr_proc, ptraceprocess=new_ptrace_proc)
+                print("created newproc=", new_proc)
+
+                curr_proc.children.append(new_proc)
+                self.addProcess(new_proc)
+                print("added process")
+
+                pid= int( str(event).split(" ")[2])
+                self.switchProcess(pid)
+
+                return str(event)
+            else:
+                print("new process, running till exit")
+                assert isinstance(new_ptrace_proc,PtraceProcess)
+                new_ptrace_proc.setoptions(0)
+                new_ptrace_proc.detach()
+
+
+        def handle_ProcessExecution(event):
+            """this is called if a processes calls execve"""
+            return str(event)
+
         if isinstance(event, ProcessExit):
             return handle_Exit()
+        elif isinstance(event, NewProcessEvent):
+            return handle_NewProcess(event)
+
+        elif isinstance(event, ProcessExecution):
+            return handle_ProcessExecution(event)
+
+
         else:
             raise event
 

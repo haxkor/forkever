@@ -1,6 +1,6 @@
 from sys import exc_info
 from traceback import format_exception
-from logging2 import ERROR, getLogger
+from logging2 import ERROR, getLogger, WARNING
 from ptrace.logging_tools import getLogFunc, changeLogLevel
 
 PTRACE_ERRORS = Exception
@@ -44,9 +44,10 @@ def writeError(logger, error, title="ERROR", log_level=ERROR):
     (raise) the exception and don't write it.
     """
     if not logger:
-        logger = getLogger()
+        logger = getLogger("error")
     if error.__class__ in (SystemExit, KeyboardInterrupt):
         raise error
+    log_level=WARNING   # to avoid a pwnlib exception raise
     log_func = getLogFunc(logger, log_level)
     log_func("%s: %s" % (title, formatError(error)))
     writeBacktrace(logger, log_level=changeLogLevel(log_level, -1))

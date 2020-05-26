@@ -38,7 +38,7 @@ class FunctionArgument(object):
                 else:
                     self.text = repr(self.value)
             except PTRACE_ERRORS as err:
-                writeError(getLogger(), err,
+                writeError(None, err,
                            "Format argument %s of function %s() value error"
                            % (self.name, self.function.name))
                 self.text = repr(self.value)

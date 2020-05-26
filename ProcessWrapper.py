@@ -115,8 +115,14 @@ class ProcessWrapper:
             self._copyBreakpoints()
 
             self.heap = None
-            self.programinfo = ProgramInfo(parent.programinfo.path_to_hack,
-                                           self.ptraceProcess.pid, self)
+
+            # if the process spawns new children for other purposes, it might load another library.
+            # the loaded path could be determined TODO
+            try:
+                self.programinfo = ProgramInfo(parent.programinfo.path_to_hack,
+                                               self.ptraceProcess.pid, self)
+            except ValueError as e:     # if another library is loaded instead of our initial executable
+                self.programinfo = ProgramInfo(None, self.ptraceProcess.pid, self)
 
     def _copyBreakpoints(self):
         """this is used to creaty new breakpoint python objects for a forked process"""
@@ -133,6 +139,7 @@ class ProcessWrapper:
         ip= self.parent.remember_insert_bp
         if ip:  # this var stores the address of where the bp has to be inserted
             self.insertBreakpoint(ip)
+
 
     def getHeap(self):
         return self.heap

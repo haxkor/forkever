@@ -173,17 +173,18 @@ class InputHandler:
         from Constants import UPD_FROMBLOB, UPD_FROMBLOBNEXT, CMD_REQUEST
 
         if event & POLLHUP:
-            print("hyx closed, remaining data = %s" % hyxtalker.hyxsock.recv(1000))
+            remaining_data = hyxtalker.hyxsock.recv(1000)
+            if remaining_data:
+                print(remaining_data)
             self.delete_hyx()
             return
         if event != POLLIN:
-            print(event)
-            raise NotImplementedError
+            raise NotImplementedError("unknown event: %s" % event)
 
         check = hyxtalker.hyxsock.recv(1)
         if check == CMD_REQUEST:
             cmd = hyxtalker.recvCommand()
-            print("%s   (hyx) " % cmd)
+            print("%s   (hyx)" % cmd)
             result = self.execute(cmd)
             print(result)
             hyxtalker.sendCommandResponse(result)
@@ -208,34 +209,29 @@ class InputHandler:
         self.hyxTalker.destroy(rootsock=True)
         self.hyxTalker = None
 
-    def init_hyx(self, cmd="heap rw"):
+    def init_hyx(self, cmd:str):
         """open a segment with Hyx. You can specify the permissions of the segment, default is rwp.
-       You can use slicing syntax, [1:-3] will open the segment starting with an offset of 0x1000
+       You can use slicing syntax, [1:-3] will open the segment starting with an offset of 0x1000, ending 0x3000 bytes before actual send of segment
        You can also trim the segment to start at the first page that has some non-zero bytes in it.
 
        Example use:
-       hyx heap [2:]
-       hyx stack [i:i]
+       hyx heap [f:]     omits the first fifteen pages
+       hyx stack [i:i]   removes "boring" (zero-filled) pages from the start and end
        hyx libc rp"""
         currentProcess = self.manager.getCurrentProcess()
         args = INIT_HYX_ARGS.match(cmd)
 
         if not args:
-            return "could not match this \nexample use: hyx libc rwx [a1:] this will load the libc segment with rwx " \
-                   "permissions starting at offset 0xA1000 "
-
-        segment = args.group(1)
-        permissions = args.group(2)
+            segment = "heap"
+            permissions = "rwp"
+        else:
+            segment = args.group(1)
+            permissions = args.group(2)
 
         # if sliceoffsets are specified, convert the strings to int
         convert_func = lambda slice_str: int(slice_str, 16) * 0x1000 if slice_str else 0
         start, stop = map(convert_func, [args.group(4), args.group(6)])
 
-        if not segment:
-            segment = "heap"
-
-        if not permissions:
-            permissions = "rwp"
 
         init_args = MemorySegmentInitArgs(segment, permissions, start, stop,
                                           start_nonzero=bool(args.group(5)),
@@ -301,6 +297,7 @@ INIT_HYX_ARGS = re.compile(
 if __name__ == "__main__":
     path_to_hack = "/home/jasper/university/barbeit/dummy/a.out"
     path_to_hack = "/home/jasper/university/barbeit/dummy/minimalloc"
+    path_to_hack = "/home/jasper/university/bx/pwn/oldpwn/pwn18/vuln"
     from ProcessWrapper import LaunchArguments
 
     args = LaunchArguments([path_to_hack], False)

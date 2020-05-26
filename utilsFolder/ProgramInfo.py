@@ -17,7 +17,7 @@ class ProgramInfo:
         self.elfDict = dict()
         self.baseDict = dict()
 
-        self.elf = self._getElf(path_to_hack)
+        self.elf = self._getElf(path_to_hack) if path_to_hack else None
 
         self.procWrap_ref = ref(procWrap)
 
@@ -31,7 +31,7 @@ class ProgramInfo:
         else:
             maps = getMappings(self.pid, lib)
             if len(maps) == 0:
-                raise ValueError("not found")
+                raise ValueError("lib not found")
 
             # make sure there arent multiple libarys with the given infix
             sortfunc = lambda mapping: mapping.pathname
@@ -74,6 +74,8 @@ class ProgramInfo:
             lib, _, symbol = symbol.partition(":")  # libc:free
 
         elf = self._getElf(lib)
+        print("symbol= ",symbol)
+        print(elf.symbols)
 
         find_cands = lambda x: symbol in x
         candidates = list(filter(find_cands, elf.symbols.keys()))

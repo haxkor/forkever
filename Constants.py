@@ -16,6 +16,8 @@ RELATIVE_ADRESS_THRESHOLD = 0xFFffFFff
 
 PRINT_BORING_SYSCALLS = True
 
+FOLLOW_NEW_PROCS = False
+
 # when looking up a symbol, other symbols matching the lookup will be printed
 PRINT_OTHER_CANDIDATES = False
 
