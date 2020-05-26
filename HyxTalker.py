@@ -5,11 +5,11 @@ from Constants import hyx_path, runargs, socketname
 
 from utilsFolder.PaulaPoll import PaulaPoll
 
-from HeapClass import Heap
+from utilsFolder.HeapClass import Heap
 
 SZ_SIZET = 8
 
-from Constants import UPD_FROMBLOB, UPD_FROMBLOBNEXT, UPD_FROMPAULA, UPD_FROMPAULA_INSERT
+from Constants import UPD_FROMPAULA_INSERT
 
 import os
 

@@ -9,23 +9,23 @@ from subprocess import Popen
 from ptrace.debugger.ptrace_signal import ProcessSignal
 from signal import SIGTRAP
 
-from HeapClass import Heap
+from utilsFolder.HeapClass import Heap
 
 from ptrace.func_call import FunctionCallOptions
-from Constants import (RELATIVE_ADRESS_THRESHOLD, PRINT_BORING_SYSCALLS,
+from Constants import (PRINT_BORING_SYSCALLS,
                        SIGNALS_IGNORE, path_launcher)
 
-from utilsFolder.Parsing import parseInteger, parseBytes
+from utilsFolder.Parsing import parseInteger
 
 from struct import iter_unpack, pack
 
 import pwn
 
 from utilsFolder.ProgramInfo import ProgramInfo
-from logging2 import warning, info
+from logging2 import info
 import re
 from ptrace.tools import locateProgram
-from shutil import which
+
 
 class LaunchArguments:
 

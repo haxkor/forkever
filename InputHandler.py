@@ -4,14 +4,13 @@ from utilsFolder.PollableQueue import PollableQueue
 from signal import SIGWINCH
 import re
 
-from threading import Thread
 from utilsFolder.InputReader import InputReader, InputSockReader
-from HeapClass import Heap, MemorySegmentInitArgs
+from utilsFolder.HeapClass import Heap, MemorySegmentInitArgs
 
 from ProcessWrapper import ProcessWrapper, LaunchArguments
 from HyxTalker import HyxTalker
 from utilsFolder.Parsing import parseInteger
-from Helper import my_help
+from utilsFolder.Helper import my_help
 
 
 class InputHandler:
