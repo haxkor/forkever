@@ -34,7 +34,7 @@ You can adjust behavior further by fiddling in *Constants.py*
 
 # B U G S ?
 
-~~incase~~ When you find them, please open up an issue on Github 
+~~Incase~~ Once you find them, please open up an issue on Github 
 or send me a mail to *haxkor@tutanota.com* 
    
    
