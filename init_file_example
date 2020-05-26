@@ -1,0 +1,6 @@
+b malloc
+c
+c
+malloc 0x100
+hyx heap rwp
+c
