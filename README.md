@@ -12,11 +12,11 @@ It lets you
     pip install pwntools
     git clone https://github.com/haxkor/forkever
     chmod +x forkever/forkever.py
-    gcc -o launcher -g -no-pie forkever/launcher/launcher.c
+    gcc -o forkever/launcher/launcher -g -no-pie forkever/launcher/launcher.c
     
     git clone https://github.com/haxkor/hyx4forkever
-    cd hyx4forkever/
-    make
+    gcc -o hyx4forkever/hyx -pthread hyx4forkever/*.c
+    
     
 Forkever makes use of (a slightly modified) python-ptrace.
 The Author of this library recommends to install the binding of ptrace *"for faster debug and to avoid ctypes"*, although it is not necessary. 
