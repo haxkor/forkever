@@ -1,11 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import pwn
 pwn.context.log_level = "ERROR"
 
 from argparse import ArgumentParser, REMAINDER
 from InputHandler import InputHandler
 from ProcessWrapper import LaunchArguments
-
-print(pwn.log)
 
 p = ArgumentParser()
 p.add_argument("-init", help="Pass a file for initial commands")
