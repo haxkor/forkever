@@ -15,6 +15,7 @@ SYSCALL_INSTR = asm("syscall")
 # ------- DONT MODIFY STUFF ABOVE ------  #
 
 hyx_path = "/home/jasper/CLionProjects/hyxWIP/hyx-0.1.5/myhyx"
+hyx_path = "../hyx4forkever/hyx"
 
 path_launcher = "launcher/launcher"
 socketname = "/tmp/forkever_hyx_sock"

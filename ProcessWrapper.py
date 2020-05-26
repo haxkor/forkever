@@ -33,6 +33,7 @@ class LaunchArguments:
 
         self.path = locateProgram(argvlist[0])
         print("path= ",self.path)
+        argvlist[0] = self.path
         self.argvlist = argvlist
         self.random = random
 
