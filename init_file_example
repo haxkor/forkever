@@ -1,4 +1,6 @@
 b malloc
+trace write
+trace mmap
 c
 c
 malloc 0x100
