@@ -15,7 +15,7 @@ It lets you
     gcc -o launcher -g -no-pie forkever/launcher/launcher.c
     
     git clone https://github.com/haxkor/hyx4forkever
-    cd hyxforkever/hyx_/
+    cd hyx4forkever/
     make
     
 Forkever makes use of (a slightly modified) python-ptrace.
