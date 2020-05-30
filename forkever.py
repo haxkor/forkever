@@ -21,11 +21,24 @@ launch_args = LaunchArguments(parsed_args.runargs, parsed_args.rand)
 
 handler = InputHandler(launch_args, startupfile=parsed_args.init, inputsock=parsed_args.sock)
 
+def _handle_final_outputs(poll_res):
+    from operator import itemgetter
+    get_first = itemgetter(0)
+    get_outs = lambda poll_elem: get_first(poll_elem)
+    outs = map(get_outs(poll_res))
+    if any("out" in outs):
+        handler.handle_procout(None, None, None)
+    if any("err" in outs):
+        handler.handle_stderr(None, None)
+
 try:
     handler.inputLoop()
 except KeyboardInterrupt:
     handler.manager.debugger.quit()
-    handler.handle_procout(None,None,None)
+    poll_res = handler.inputPoll.poll(10)
+    if poll_res:
+        _handle_final_outputs(poll_res)
+
     exit(1)
 except BaseException as e:
     raise e
