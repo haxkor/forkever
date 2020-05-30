@@ -70,12 +70,12 @@ class InputHandler:
         elif cmd.startswith("malloc"):
             _, _, val = cmd.partition(" ")
             val = parseInteger(val, procWrap)
-            result = manager.malloc(val)
+            result = manager.callFunction("call " + cmd)
 
         elif cmd.startswith("free"):
             _, _, pointer = cmd.partition(" ")
             pointer = parseInteger(pointer, procWrap)
-            result = manager.free(pointer)
+            result = manager.callFunction("call " + cmd)
 
         elif cmd.startswith("fin"):
             result = manager.finish()

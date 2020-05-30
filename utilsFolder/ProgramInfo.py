@@ -74,8 +74,8 @@ class ProgramInfo:
             lib, _, symbol = symbol.partition(":")  # libc:free
 
         elf = self._getElf(lib)
-        print("symbol= ",symbol)
-        print(elf.symbols)
+
+        #print(elf.symbols)
 
         find_cands = lambda x: symbol in x
         candidates = list(filter(find_cands, elf.symbols.keys()))
