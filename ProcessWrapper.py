@@ -703,7 +703,7 @@ class ProcessWrapper:
 
         # prepare mmap syscall
         MAP_FIXED_NOREPLACE = 1048576
-        prot = PROT_READ | PROT_WRITE | PROT_EXEC
+        prot =  PROT_EXEC   # PROT_READ | PROT_WRITE |
         mapflags = MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED_NOREPLACE
         length = 0x1000
 
