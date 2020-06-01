@@ -44,5 +44,3 @@ except KeyboardInterrupt:
         _handle_final_outputs(poll_res)
 
     exit(1)
-except BaseException as e:
-    raise e
