@@ -235,10 +235,6 @@ class ProcessWrapper:
     def getPid(self):
         return self.ptraceProcess.pid
 
-    def setHeap(self):
-        if self.heap is None:
-            self.heap = Heap(self)
-
     def forkProcess(self):
         """ forks the process. If the process just syscalled (and is trapped in the syscall entry),
             the forked child starts just before that syscall.
@@ -254,10 +250,6 @@ class ProcessWrapper:
         Step over the syscall, start tracing the new child.
         Restore the states of both processes. (Child does not reenter syscall)
         """
-
-        def printregs(s, proc):
-            print(s, "ip= %#x\trax=%#x\torig_rax=%#x" % (
-                proc.getInstrPointer(), proc.getreg("rax"), proc.getreg("orig_rax")))
 
         process = self.ptraceProcess
         ip = process.getInstrPointer()  # save state
@@ -276,7 +268,6 @@ class ProcessWrapper:
 
         process.singleStep()  # continue till fork happended
         event = process.waitEvent()
-        # print("got event_stop", event, "pid=", process.pid)
         from ptrace.debugger.process_event import NewProcessEvent
         assert isinstance(event, NewProcessEvent)
 
@@ -314,7 +305,6 @@ class ProcessWrapper:
 
     def getFamily(self):
         """print all children of the process"""
-
         def getRepr(procWrap: ProcessWrapper):
             return str(procWrap.getPid())
 
@@ -330,10 +320,7 @@ class ProcessWrapper:
         if adress is None:
             return
 
-        print(self.ptraceProcess.breakpoints)
         result= self.ptraceProcess.createBreakpoint(adress)
-
-        print(self.ptraceProcess.breakpoints)
         return result
 
     def reinstertBreakpoint(self):
@@ -367,10 +354,6 @@ class ProcessWrapper:
         else:
             proc.removeBreakpoint(bp)
             print("breakpoint removed")
-
-    def tryFunction(self, funcname, *args):
-        clone = self.forkProcess()
-        clone.callFunction(funcname, *args)
 
     def callFunction(self, funcname, *args, tillResult=False):
         """ Redirect control flow to call the specified function with given arguments.
@@ -445,7 +428,7 @@ class ProcessWrapper:
 
     def free(self, pointer):
         """call plt.free(pointer)
-        If you want to call libc.free, use tryFunction(libc:free, pointer)"""
+        If you want to call libc.free, use callFunction(libc:free, pointer)"""
         return self.callFunction("plt.free", pointer)
 
     def singlestep(self):

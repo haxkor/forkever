@@ -80,9 +80,6 @@ class InputHandler:
         elif cmd.startswith("fin"):
             result = manager.finish()
 
-        elif cmd.startswith("try"):
-            result = manager.tryFunction(cmd)
-
         elif cmd.startswith("list b"):
             print(manager.getCurrentProcess().ptraceProcess.breakpoints)
 
