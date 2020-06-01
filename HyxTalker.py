@@ -31,7 +31,6 @@ class HyxTalker():
         self.poll = poll
         self.launchHyx(heapobj)
 
-
     def launchHyx(self, heapobj: Heap):
         """open a segment with Hyx. You can specify the permissions of the segment, default is rwp.
     You can use slicing syntax, [1:-3] will open the segment starting with an offset of 0x1000
@@ -42,6 +41,7 @@ class HyxTalker():
     hyx stack [i:i]
     hyx libc rp
     """
+
         # this docstring shouldnt really be here, but i dont want the
         # helper to import from inputhandler to avoid import loop
 
@@ -52,14 +52,14 @@ class HyxTalker():
         offset = heapobj.start
 
         # prepare args
-        args=[hyx_path, "-offset", hex(offset), "-socket", self._socketname, filepath]
+        args = [hyx_path, "-offset", hex(offset), "-socket", self._socketname, filepath]
 
         if runargs:
             args = runargs + args
             self.hyxprocess = Popen(args)
         else:
             pref = ["gdb -ex \"b updater.c:requestCommandPaula\"  --args"]
-            print(argsStr(pref+args))  # incase spawning new window isnt possible
+            print(argsStr(pref + args))  # incase spawning new window isnt possible
 
         self.rootsock.listen(1)
         self.hyxsock, _ = self.rootsock.accept()
@@ -94,8 +94,8 @@ class HyxTalker():
         self.hyxsock.send(UPD_FROMPAULA_INSERT)
         length = self.heap.stop - self.heap.start
         self.hyxsock.send(pack("<Q", length))
-        ret=self.hyxsock.send(self.heap.heapbytes)
-        print("sent %#x bytes" % ret )
+        ret = self.hyxsock.send(self.heap.heapbytes)
+        print("sent %#x bytes" % ret)
         print("heapbytes len= %x" % len(self.heap.heapbytes))
 
     def getUpdate(self, isNextByte=False):
@@ -144,7 +144,7 @@ class HyxTalker():
         cmd = bytearray(0x100)
         assert self.hyxsock.recv_into(cmd) == 0x100
         replace = cmd.find(b"\x00")
-        cmd[replace:replace + 1] = b" "
+        cmd[replace:replace + 1] = b" "  # strtok used in hyx replaced the first " " with a nullbyte
         end = cmd.find(b"\x00")
         return cmd[:end].decode()
 
@@ -153,7 +153,6 @@ class HyxTalker():
             cmd = cmd.encode()
         cmd = cmd[:0x100]
         self.hyxsock.send(cmd.ljust(0x100, b"\x00"))
-
 
     def destroy(self, rootsock=False):
         self.poll.unregister(self.getSockFd())

@@ -1,8 +1,10 @@
 from utilsFolder.PaulaPoll import PaulaPoll
 from ProcessManager import ProcessManager
 from utilsFolder.PollableQueue import PollableQueue
-from signal import SIGWINCH
 import re
+
+from select import POLLHUP, POLLIN
+from Constants import UPD_FROMBLOB, UPD_FROMBLOBNEXT, CMD_REQUEST
 
 from utilsFolder.InputReader import InputReader, InputSockReader
 from utilsFolder.HeapClass import Heap, MemorySegmentInitArgs
@@ -45,7 +47,6 @@ class InputHandler:
         elif cmd.startswith("call"):
             result = manager.callFunction(cmd)
 
-
         elif cmd.startswith("c"):  # continue
             result = manager.cont()
 
@@ -68,13 +69,9 @@ class InputHandler:
             result = manager.addBreakpoint(cmd)
 
         elif cmd.startswith("malloc"):
-            _, _, val = cmd.partition(" ")
-            val = parseInteger(val, procWrap)
             result = manager.callFunction("call " + cmd)
 
         elif cmd.startswith("free"):
-            _, _, pointer = cmd.partition(" ")
-            pointer = parseInteger(pointer, procWrap)
             result = manager.callFunction("call " + cmd)
 
         elif cmd.startswith("fin"):
@@ -103,7 +100,6 @@ class InputHandler:
 
         elif cmd.startswith("getsegment"):
             _, _, cmd = cmd.partition(" ")
-
             result = manager.getCurrentProcess().get_own_segment()
 
         elif cmd.startswith("?"):
@@ -117,31 +113,31 @@ class InputHandler:
     def inputLoop(self):
         print("type ? for help")
         while True:
-            pollresult = self.inputPoll.poll()
-            assert len(pollresult) > 0
+            poll_result = self.inputPoll.poll()
+            assert len(poll_result) > 0
 
-            if len(pollresult) == 1:
-                name, pollfd, event = pollresult[0]
+            if len(poll_result) == 1:
+                name, fd, event = poll_result[0]
                 if name == "hyx":
                     self.handle_hyx(event)
                 elif name == "userinput":
-                    self.handle_stdin(pollfd, event)
+                    self.handle_stdin()
                 elif "-out" in name:
-                    self.handle_procout(name, pollfd, event)
+                    self.handle_procout(name, fd, event)
 
                 elif "-err" in name:
                     self.handle_stderr(event)
 
             else:  # this happens when two sockets are written to at the "same" time
-                for name, pollfd, event in pollresult:
+                for name, fd, event in poll_result:
                     if "-out" in name:
-                        self.handle_procout(name, pollfd, event)
+                        self.handle_procout(name, fd, event)
                         break
                     elif "-err" in name:
-                        self.handle_stderr(name, pollfd, event)
+                        self.handle_stderr(name)
+                        break
 
-                print(pollresult)
-                # raise NotImplementedError
+                print(poll_result)
 
             if self.hyxTalker:
                 self.hyxTalker.updateHyx()
@@ -151,12 +147,9 @@ class InputHandler:
         print(self.manager.getCurrentProcess().read(0x1000, "err"))
 
     # this is called when a new line has been put to the stdinQ
-    def handle_stdin(self, fd, event):
+    def handle_stdin(self):
         cmd = self.stdinQ.get()[:-1]  # remove newline
         assert isinstance(cmd, str)
-
-        if event == SIGWINCH:
-            return
 
         result = self.execute(cmd)
         if result:
@@ -165,10 +158,7 @@ class InputHandler:
     def handle_hyx(self, event):
         hyxtalker = self.hyxTalker
 
-        from select import POLLHUP, POLLIN
-        from Constants import UPD_FROMBLOB, UPD_FROMBLOBNEXT, CMD_REQUEST
-
-        if event & POLLHUP:
+        if event & POLLHUP:  # sock closed
             remaining_data = hyxtalker.hyxsock.recv(1000)
             if remaining_data:
                 print(remaining_data)
@@ -205,7 +195,7 @@ class InputHandler:
         self.hyxTalker.destroy(rootsock=True)
         self.hyxTalker = None
 
-    def init_hyx(self, cmd:str):
+    def init_hyx(self, cmd: str):
         """open a segment with Hyx. You can specify the permissions of the segment, default is rwp.
        You can use slicing syntax, [1:-3] will open the segment starting with an offset of 0x1000, ending 0x3000 bytes before actual send of segment
        You can also trim the segment to start at the first page that has some non-zero bytes in it.
@@ -227,7 +217,6 @@ class InputHandler:
         # if sliceoffsets are specified, convert the strings to int
         convert_func = lambda slice_str: int(slice_str, 16) * 0x1000 if slice_str else 0
         start, stop = map(convert_func, [args.group(4), args.group(6)])
-
 
         init_args = MemorySegmentInitArgs(segment, permissions, start, stop,
                                           start_nonzero=bool(args.group(5)),
@@ -269,7 +258,7 @@ class InputHandler:
 
         newProc = self.manager.getCurrentProcess()
         if newProc.heap:
-            newHeap= newProc.heap
+            newHeap = newProc.heap
         else:
             args = self.hyxTalker.heap.args
             newHeap = Heap(newProc, args)
