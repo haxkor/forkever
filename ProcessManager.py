@@ -140,7 +140,6 @@ class ProcessManager:
         elif isinstance(event, ProcessExecution):
             return handle_ProcessExecution(event)
 
-
         else:
             raise event
 
@@ -221,20 +220,20 @@ class ProcessManager:
         cmd = cmd.strip()
         cmd_match = TRACE_SYSCALL_ARGS.match(cmd)
         delete = bool(cmd_match.group(1))  # if "not" is present, delete
-        which = cmd_match.group(2)
+        syscall_name = cmd_match.group(2)
 
         syscall_list = self.syscalls_to_trace
 
         if delete:
-            if which in syscall_list:
-                syscall_list.remove(which)
+            if syscall_name in syscall_list:
+                syscall_list.remove(syscall_name)
             else:
                 return "not found. currently tracing " + " ".join(syscall_list)
 
         else:
 
-            if which in SYSCALL_NAMES.values() and which not in syscall_list:
-                syscall_list.append(which)
+            if syscall_name in SYSCALL_NAMES.values() and syscall_name not in syscall_list:
+                syscall_list.append(syscall_name)
             else:
                 return "currently tracing " + " ".join(syscall_list)
 
