@@ -650,6 +650,15 @@ class ProcessWrapper:
 
         return result[1:]  # remove first newline
 
+    def where(self):
+        ip= self.ptraceProcess.getInstrPointer()
+        where_symbol, where_ad = self.programinfo.where(ip)
+        delta = ip - where_ad
+
+        return "RIP = %s + %#x" % (where_symbol, delta)
+
+
+
     def print(self, cmd: str):
         """print.  prefixing with * dereferences the result.
         Otherwise, the * works as the multiplication operator.

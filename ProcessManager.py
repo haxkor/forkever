@@ -6,8 +6,6 @@ from ptrace.debugger import PtraceDebugger, PtraceProcess
 from ptrace.func_call import FunctionCallOptions
 from ptrace.debugger.process import ProcessError
 
-from Constants import path_launcher
-from signal import SIGCHLD
 from re import compile as compile_regex
 
 hyx_path = "/"
@@ -15,6 +13,8 @@ hyx_path = "/"
 from utilsFolder.PaulaPoll import PaulaPoll
 from utilsFolder.Parsing import parseInteger
 from Constants import FOLLOW_NEW_PROCS
+
+from utilsFolder.PaulaPoll import BiDict
 
 
 class ProcessManager:
@@ -31,6 +31,10 @@ class ProcessManager:
             write_argname=True,
             write_address=True,
         )
+
+        self.named_processes = BiDict()
+
+
 
     def addProcess(self, proc: ProcessWrapper):
         self.processList.append(proc)
@@ -77,11 +81,16 @@ class ProcessManager:
         except ProcessEvent as event:
             self._handle_ProcessEvent(event)
 
-    def fork(self):
+    def fork(self, cmd:str):
         """fork the current process and switch to it.
         print all processes with 'family' """
         procWrap = self.getCurrentProcess()
         child = self.addProcess(procWrap.forkProcess())
+
+        _, _, name = cmd.partition(" ")
+        if name:
+            self.name_process(name, child.getPid())
+
         return self.switchProcess(str(child.getPid()))
 
     def addBreakpoint(self, cmd):
@@ -153,6 +162,20 @@ class ProcessManager:
             except ProcessEvent as event:
                 return self._handle_ProcessEvent(event)
 
+    def name_process(self, name, pid=None):
+        if pid is None:
+            pid= self.getCurrentProcess().getPid()
+
+        if name in self.named_processes:
+            return "name already taken"
+        elif pid in self.named_processes:
+            del self.named_processes[pid]
+            self.named_processes[pid] = name
+            return "renamed process"
+        else:
+            self.named_processes[pid] = name
+
+
     def switchProcess(self, cmd: str):
         """ switch ?  prints all processes
             switch up  switches to parent
@@ -169,10 +192,14 @@ class ProcessManager:
             pid = currProc.parent.getPid()
         else:  # look for number
             try:
-                pid = int(cmd)
-                assert pid in list(proc.getPid() for proc in self.processList)
-            except (ValueError, AssertionError):
-                return "process not found"
+                if cmd.isnumeric():
+                    pid= int(cmd)
+                    assert pid in list(proc.getPid() for proc in self.processList)
+                else:
+                    pid= self.named_processes[cmd]
+
+            except (AssertionError, KeyError):
+                return "not found"
 
         processList = self.processList
         if len(processList) == 1:
@@ -188,12 +215,12 @@ class ProcessManager:
                 except StopIteration:
                     return "no process with pid %d" % pid
             self.currentProcess = proc
-            return "switched to %d" % pid
+            return "switched to %d\n%s" % (pid , self.currentProcess.where())
         else:
             ind = processList.index(self.getCurrentProcess())
             nextproc = processList[(ind + 1) % len(processList)]
             self.currentProcess = nextproc
-            return "switched to %d" % nextproc.ptraceProcess.pid
+            return "switched to %d\n%s" % (pid, self.currentProcess.where())
 
     def finish(self):
         return self.getCurrentProcess().finish()

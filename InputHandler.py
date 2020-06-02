@@ -55,7 +55,7 @@ class InputHandler:
             result = manager.write(cmd)
 
         elif cmd.startswith("fork"):
-            result = self.fork()
+            result = self.fork(cmd)
 
         elif cmd.startswith("proclist"):
             print(manager.processList)
@@ -232,13 +232,13 @@ class InputHandler:
 
         self.hyxTalker = HyxTalker(heap, self.inputPoll)
 
-    def fork(self):
+    def fork(self, cmd):
         manager = self.manager
         currProc = manager.getCurrentProcess()
 
         # make sure there is a new child after forking, switch to new child
         children_count = len(currProc.children)
-        result = manager.fork()
+        result = manager.fork(cmd)
         if len(currProc.children) > children_count:
             self._switch_hyxtalker()
 
