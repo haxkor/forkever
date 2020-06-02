@@ -12,10 +12,12 @@ from pwn import asm
 
 SYSCALL_INSTR = asm("syscall")
 
+COLOR_NORMAL = "\033[m"
+COLOR_CURRENT_PROCESS = "\033[0;31m"     # red
+
 # ------- DONT MODIFY STUFF ABOVE ------  #
 
 hyx_path = "../hyx4forkever/hyx"
-
 path_launcher = "launcher/launcher"
 socketname = "/tmp/forkever_hyx_sock"
 

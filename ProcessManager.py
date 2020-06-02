@@ -12,7 +12,7 @@ hyx_path = "/"
 
 from utilsFolder.PaulaPoll import PaulaPoll
 from utilsFolder.Parsing import parseInteger
-from Constants import FOLLOW_NEW_PROCS
+from Constants import FOLLOW_NEW_PROCS, COLOR_CURRENT_PROCESS, COLOR_NORMAL
 
 from utilsFolder.PaulaPoll import BiDict
 
@@ -183,7 +183,7 @@ class ProcessManager:
         if isinstance(cmd, int):
             cmd = str(cmd)
         if "?" in cmd:
-            return self.processList[0].getFamily()
+            return self.family()
 
         currProc = self.getCurrentProcess()
         if "up" in cmd:
@@ -226,7 +226,17 @@ class ProcessManager:
         return self.getCurrentProcess().finish()
 
     def family(self):
-        return self.getCurrentProcess().getFamily()
+        """if no argument is given, print all children of current process
+        if argument is given, print all processes and highlight current process"""
+        pidstr = str(self.getCurrentProcess().getPid())
+        proc = self.processList[0]
+
+        tree= proc.getFamily()
+        replace_with = COLOR_CURRENT_PROCESS + pidstr + COLOR_NORMAL
+        result= tree.replace(pidstr, replace_with)
+
+        print(result, "in procmanag")
+        return result
 
     def write(self, text):
         procWrap = self.getCurrentProcess()
