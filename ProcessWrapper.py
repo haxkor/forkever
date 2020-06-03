@@ -22,7 +22,7 @@ from struct import iter_unpack, pack
 import pwn
 
 from utilsFolder.ProgramInfo import ProgramInfo
-from logging2 import info
+from logging2 import info, debug
 import re
 from ptrace.tools import locateProgram
 
@@ -127,11 +127,11 @@ class ProcessWrapper:
 
     def _copyBreakpoints(self):
         """this is used to creaty new breakpoint python objects for a forked process"""
-        print("cloning breakpoints")
+        debug("cloning breakpoints")
         from ptrace.debugger.process import Breakpoint
-        print(self.parent.ptraceProcess.breakpoints)
+        debug(self.parent.ptraceProcess.breakpoints)
         for bp in self.parent.ptraceProcess.breakpoints.values():
-            print("bp=", bp)
+            debug("bp=", bp)
             assert isinstance(bp, Breakpoint)
             new_bp = self.ptraceProcess.createBreakpoint(bp.address)
             new_bp.old_bytes = bp.old_bytes

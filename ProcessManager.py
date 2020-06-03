@@ -1,3 +1,4 @@
+from Constants import FOLLOW_NEW_PROCS
 from ProcessWrapper import ProcessWrapper, LaunchArguments
 from ptrace.debugger.process_event import ProcessEvent, ProcessExit, NewProcessEvent, ProcessExecution
 
@@ -12,7 +13,7 @@ hyx_path = "/"
 
 from utilsFolder.PaulaPoll import PaulaPoll
 from utilsFolder.Parsing import parseInteger
-from Constants import FOLLOW_NEW_PROCS, COLOR_CURRENT_PROCESS, COLOR_NORMAL
+
 
 from utilsFolder.PaulaPoll import BiDict
 
