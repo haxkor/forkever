@@ -55,6 +55,7 @@ class HyxTalker():
         args = [hyx_path, "-offset", hex(offset), "-socket", self._socketname, filepath]
 
         if runargs:
+            #print(argsStr(args))
             args = runargs + args
             self.hyxprocess = Popen(args)
         else:

@@ -56,7 +56,7 @@ def parseInteger(text, procWrap=None):
         return str(value)
 
 
-    symbol_regex = r"(?<!0x)[a-zA-Z][a-zA-Z0-9_]*"  # a symbol or library should not start with a number
+    symbol_regex = r"(?<!0x)[a-zA-Z_][a-zA-Z0-9_]*"  # (first_char)(rest)*    if your symbol contains other characters, include them here
     symbol_regex_with_library = symbol_regex + r"(:" + symbol_regex + ")?"
 
     text = re.sub(r"(?:0x)[0-9a-f]+", readHexadecimal, text)

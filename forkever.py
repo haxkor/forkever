@@ -10,6 +10,7 @@ from InputHandler import InputHandler
 from ProcessWrapper import LaunchArguments
 
 
+
 def main():
     pwn.context.log_level = "ERROR"
 
@@ -37,7 +38,7 @@ def main():
         handler.inputLoop()
     except KeyboardInterrupt:
         #pids= [proc.pid for proc in handler.manager.debugger.list]
-        handler.manager.debugger.quit()
+        handler.manager.quit()
 
         #   for pid in pids:
         #    kill(pid, SIGKILL)
@@ -49,7 +50,7 @@ def main():
         exit(1)
 
     except BaseException as e:
-        handler.manager.debugger.quit() # otherwise launched children stay alive
+        handler.manager.quit() # otherwise launched children stay alive
         raise e
 
 

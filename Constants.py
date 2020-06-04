@@ -1,3 +1,5 @@
+from ptrace.tools import locateProgram
+
 UPD_FROMBLOB = b"\x40"
 UPD_FROMBLOBNEXT = b"\x41"
 UPD_FROMPAULA = b"\x01"
@@ -17,12 +19,12 @@ COLOR_CURRENT_PROCESS = "\033[0;31m"     # red
 
 # ------- DONT MODIFY STUFF ABOVE ------  #
 
-hyx_path = "../hyx4forkever/hyx"
+hyx_path = locateProgram("../hyx4forkever/hyx")
 path_launcher = "launcher/launcher"
 socketname = "/tmp/forkever_hyx_sock"
 
 # this will be used to launch hyx, set to "None" and the command will be printed out so you can launch it yourself
-runargs = ["x-terminal-emulator", "--hold"]     #, "-e"]
+runargs = ["x-terminal-emulator", "-e" ] #"--hold"]     #, "-e"]
 
 # Breakpoints in PIEs will be relative to the base adress if they are below this value
 RELATIVE_ADRESS_THRESHOLD = 0xFFffFFff

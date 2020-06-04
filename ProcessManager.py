@@ -1,4 +1,4 @@
-from Constants import FOLLOW_NEW_PROCS
+from Constants import FOLLOW_NEW_PROCS, COLOR_NORMAL, COLOR_CURRENT_PROCESS
 from ProcessWrapper import ProcessWrapper, LaunchArguments
 from ptrace.debugger.process_event import ProcessEvent, ProcessExit, NewProcessEvent, ProcessExecution
 
@@ -9,13 +9,15 @@ from ptrace.debugger.process import ProcessError
 
 from re import compile as compile_regex
 
-hyx_path = "/"
+#hyx_path = "/"
 
 from utilsFolder.PaulaPoll import PaulaPoll
 from utilsFolder.Parsing import parseInteger
 
-
 from utilsFolder.PaulaPoll import BiDict
+
+from os import kill
+from signal import SIGKILL
 
 
 class ProcessManager:
@@ -274,6 +276,12 @@ class ProcessManager:
                 syscall_list.append(syscall_name)
             else:
                 return "currently tracing " + " ".join(syscall_list)
+
+    def quit(self):
+        pids = [procWrap.getPid() for procWrap in self.processList]
+        for pid in reversed(pids):
+            kill(pid, SIGKILL)
+
 
 
 TRACE_SYSCALL_ARGS = compile_regex(r"(not )?([\w]+)")

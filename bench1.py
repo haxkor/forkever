@@ -2,6 +2,8 @@ from ProcessWrapper import ProcessWrapper, LaunchArguments
 from ProcessManager import ProcessManager
 from utilsFolder.PaulaPoll import PaulaPoll
 
+import matplotlib.pyplot as plt
+import os
 import pwn
 pwn.context.log_level = "ERROR"
 
@@ -21,9 +23,9 @@ time_dict["start"] = time()
 
 manager = ProcessManager(launch_args, dummy_poll)
 time_dict["launch"] = time()
-num_children = 30000
+num_children = 10000
 
-monitor_args = "free -s 0.01 -w".split()
+monitor_args = "free -s 0.6 -w".split()
 monitor = Popen(monitor_args, stdout=PIPE)
 
 root_proc = manager.getCurrentProcess()
@@ -40,7 +42,8 @@ for i in range(num_children):
         print(i)
         num_children = i
         print( new_procs[-2].getPid())
-        raise e
+        break
+        #raise e
 
 time_dict["done"] = time()
 
@@ -76,14 +79,17 @@ def parse_free_output(output:bytes):
 
     return r
 
-import os
 os.closerange(10, 1000)
 
-import matplotlib.pyplot as plt
 
 def makeY(outputs, value:str):
     return [ parse_free_output(single_output)[value] for single_output in outputs]
 
+dimension="a"
+while dimension:
+    
+    dimension= input("what u wanna plot\n>")[:-1].decode()
+    plt.scatter( range(len(free_outputs)), makeY(free_outputs, dimension))
+    plt.show()
 
-plt.scatter( range(len(free_outputs)), makeY(free_outputs, "free"))
-plt.show()
+
