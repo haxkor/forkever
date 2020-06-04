@@ -5,7 +5,7 @@ from ptrace.error import PtraceError
 from ptrace.debugger.process import PtraceProcess
 
 REGISTER_REGEX = re.compile(r"\$[a-z]+[a-z0-9_]+")
-from logging2 import warning
+from logging2 import warning, debug
 
 ptraceProc_g = None  # ugly but easy passing of proc to readRegister
 
@@ -42,7 +42,7 @@ def parseInteger(text, procWrap=None):
             try:
                 return str(procWrap.programinfo.getAddrOf(text))
             except ValueError as e:
-                print(e)
+                debug(e)
                 return text
 
     # Replace hexadecimal numbers by decimal numbers
