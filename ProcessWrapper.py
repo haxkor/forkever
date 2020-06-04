@@ -13,7 +13,7 @@ from utilsFolder.HeapClass import Heap
 
 from ptrace.func_call import FunctionCallOptions
 from Constants import (PRINT_BORING_SYSCALLS,
-                       SIGNALS_IGNORE, path_launcher)
+                       SIGNALS_IGNORE, path_launcher, LOAD_PROGRAMINFO)
 
 from utilsFolder.Parsing import parseInteger
 
@@ -119,11 +119,12 @@ class ProcessWrapper:
 
             # if the process spawns new children for other purposes, it might load another library.
             # the loaded path could be determined TODO
-            try:
-                self.programinfo = ProgramInfo(parent.programinfo.path_to_hack,
-                                               self.ptraceProcess.pid, self)
-            except ValueError as e:     # if another library is loaded instead of our initial executable
-                self.programinfo = ProgramInfo(None, self.ptraceProcess.pid, self)
+            if LOAD_PROGRAMINFO:
+                try:
+                    self.programinfo = ProgramInfo(parent.programinfo.path_to_hack,
+                                                   self.ptraceProcess.pid, self)
+                except ValueError as e:     # if another library is loaded instead of our initial executable
+                    self.programinfo = ProgramInfo(None, self.ptraceProcess.pid, self)
 
     def _copyBreakpoints(self):
         """this is used to creaty new breakpoint python objects for a forked process"""
@@ -269,7 +270,12 @@ class ProcessWrapper:
         process.singleStep()  # continue till fork happended
         event = process.waitEvent()
         from ptrace.debugger.process_event import NewProcessEvent
-        assert isinstance(event, NewProcessEvent)
+        if not isinstance(event, NewProcessEvent):
+            rax= process.getreg("rax") - 2**64
+            import errno
+            print(errno.errorcode[-rax])
+        assert isinstance(event, NewProcessEvent), str(event)
+
 
         process.syscall()  # exit fork syscall
         process.waitSyscall()
@@ -670,6 +676,36 @@ class ProcessWrapper:
         except ValueError as e:
             result = str(e)
         return result
+
+    def getrlimit(self, resource):
+        segment = self.get_own_segment() + 0x100
+        proc= self.ptraceProcess
+
+        regs = proc.getregs()
+
+        struct_ad = proc.getreg("rsp") - 0x100
+        print("struct ad = %x" % struct_ad)
+        print(proc.readBytes(struct_ad, 100))
+
+        proc.setreg("rax", 97)
+        proc.setreg("rdi", resource)
+        proc.setreg("rsi", struct_ad)
+        proc.setInstrPointer(segment)
+        proc.writeBytes(segment, inject_syscall_instr)
+
+        proc.singleStep()
+        proc.waitEvent()
+
+        rax = proc.getreg("rax")
+        import errno
+
+        print("rax = %x" % rax,  errno.errorcode[-(rax - 2**64)] if rax > 100 else rax)
+
+        print("ip = %x" % proc.getInstrPointer())
+
+        print(proc.readBytes(struct_ad, 100))
+
+
 
     def get_own_segment(self, address=None):  #  0x7f00e1337e000
         """injects an MMAP syscall so we get our own page for code"""

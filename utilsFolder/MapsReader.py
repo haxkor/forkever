@@ -61,4 +61,6 @@ def makeMapObj(line: str) -> MemoryMappingSimple:
 def getMappings(pid: int, filterstr="") -> List[MemoryMappingSimple]:
     with open("/proc/%d/maps" % pid, "r") as maps:
         func = lambda line: filterstr in line
-        return list(makeMapObj(line) for line in filter(func, maps.readlines()))
+        result= list(makeMapObj(line) for line in filter(func, maps.readlines()))
+
+    return result

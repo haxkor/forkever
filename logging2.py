@@ -15,6 +15,9 @@ logger = getLogger("pwnlib")
 def info(msg):
     logger.info(msg)
 
+def debug(msg):
+    logger.debug(msg)
+
 
 def warning(msg):
     logger.warning(msg)

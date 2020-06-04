@@ -574,7 +574,7 @@ class PtraceProcess(object):
                 except IOError as err:
                     message = "Unable to open %s: fallback to ptrace implementation" % filename
                     if err.errno != EACCES:
-                        error(message)
+                        warning(message)
                     else:
                         info(message)
                     self.readBytes = self._readBytes

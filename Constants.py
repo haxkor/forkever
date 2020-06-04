@@ -28,7 +28,7 @@ runargs = ["x-terminal-emulator", "--hold"]     #, "-e"]
 RELATIVE_ADRESS_THRESHOLD = 0xFFffFFff
 
 PRINT_BORING_SYSCALLS = False
-
+LOAD_PROGRAMINFO = True
 # if this is true, you need to be careful to not continue on a process that is waiting on another process. It also isnt really tested
 FOLLOW_NEW_PROCS = False
 

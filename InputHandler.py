@@ -13,6 +13,7 @@ from ProcessWrapper import ProcessWrapper, LaunchArguments
 from HyxTalker import HyxTalker
 from utilsFolder.Parsing import parseInteger
 from utilsFolder.Helper import my_help
+from logging2 import info
 
 
 class InputHandler:
@@ -137,14 +138,14 @@ class InputHandler:
                         self.handle_stderr(name)
                         break
 
-                print(poll_result)
+                info(poll_result)
 
             if self.hyxTalker:
                 self.hyxTalker.updateHyx()
 
     def handle_stderr(self, event):
-        print("got this on stderr")
-        print(self.manager.getCurrentProcess().read(0x1000, "err"))
+        stderr_prefix = "[ERR] %s"
+        print(stderr_prefix % self.manager.getCurrentProcess().read(0x1000, "err"))
 
     # this is called when a new line has been put to the stdinQ
     def handle_stdin(self):
@@ -189,7 +190,7 @@ class InputHandler:
         if self.sock_reader:
             self.sock_reader.acc_sock.send(read_bytes)
 
-        print("proc %s wrote: %s" % (name, read_bytes))
+        print("[OUT] %s" % read_bytes)
 
     def delete_hyx(self):
         self.hyxTalker.destroy(rootsock=True)

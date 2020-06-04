@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 import pwn
 
+from os import kill
+from signal import SIGKILL
+
 from argparse import ArgumentParser, REMAINDER
 from InputHandler import InputHandler
 from ProcessWrapper import LaunchArguments
@@ -33,12 +36,21 @@ def main():
     try:
         handler.inputLoop()
     except KeyboardInterrupt:
+        #pids= [proc.pid for proc in handler.manager.debugger.list]
         handler.manager.debugger.quit()
+
+        #   for pid in pids:
+        #    kill(pid, SIGKILL)
+
         poll_res = handler.inputPoll.poll(10)
         if poll_res:
             _handle_final_outputs(poll_res)
 
         exit(1)
+
+    except BaseException as e:
+        handler.manager.debugger.quit() # otherwise launched children stay alive
+        raise e
 
 
 if __name__ == "__main__":
