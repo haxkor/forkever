@@ -9,10 +9,11 @@ from ptrace.debugger.process import ProcessError
 
 from re import compile as compile_regex
 
-#hyx_path = "/"
+# hyx_path = "/"
 
 from utilsFolder.PaulaPoll import PaulaPoll
 from utilsFolder.Parsing import parseInteger
+from utilsFolder.tree import format_tree
 
 from utilsFolder.PaulaPoll import BiDict
 
@@ -36,8 +37,6 @@ class ProcessManager:
         )
 
         self.named_processes = BiDict()
-
-
 
     def addProcess(self, proc: ProcessWrapper):
         self.processList.append(proc)
@@ -84,7 +83,7 @@ class ProcessManager:
         except ProcessEvent as event:
             self._handle_ProcessEvent(event)
 
-    def fork(self, cmd:str):
+    def fork(self, cmd: str):
         """fork the current process and switch to it.
         print all processes with 'family' """
         procWrap = self.getCurrentProcess()
@@ -93,6 +92,7 @@ class ProcessManager:
         _, _, name = cmd.partition(" ")
         if name:
             self.name_process(name, child.getPid())
+            self.name_process(name + "p", procWrap.getPid())
 
         return self.switchProcess(str(child.getPid()))
 
@@ -103,7 +103,7 @@ class ProcessManager:
         except ProcessError as e:
             return str(e).split(":")[0]  # happens if breakpoint is already set
 
-    def _handle_ProcessEvent(self, event:ProcessEvent):
+    def _handle_ProcessEvent(self, event: ProcessEvent):
         def handle_Exit():
             procWrap = self.getCurrentProcess()
             procWrap.is_terminated = True
@@ -129,16 +129,15 @@ class ProcessManager:
                 self.addProcess(new_proc)
                 print("added process")
 
-                pid= int( str(event).split(" ")[2])
+                pid = int(str(event).split(" ")[2])
                 self.switchProcess(pid)
 
                 return str(event)
             else:
                 print("new process, running till exit")
-                assert isinstance(new_ptrace_proc,PtraceProcess)
+                assert isinstance(new_ptrace_proc, PtraceProcess)
                 new_ptrace_proc.setoptions(0)
                 new_ptrace_proc.detach()
-
 
         def handle_ProcessExecution(event):
             """this is called if a processes calls execve"""
@@ -167,17 +166,21 @@ class ProcessManager:
 
     def name_process(self, name, pid=None):
         if pid is None:
-            pid= self.getCurrentProcess().getPid()
+            pid = self.getCurrentProcess().getPid()
 
+        # make sure no duplicates are inserted, rename them if necessary
         if name in self.named_processes:
-            return "name already taken"
-        elif pid in self.named_processes:
+            i=1
+            while name + "(%d)" % i in self.named_processes:
+                i+=1
+            name += "(%d)" % i
+
+        if pid in self.named_processes:
             del self.named_processes[pid]
             self.named_processes[pid] = name
             return "renamed process"
         else:
             self.named_processes[pid] = name
-
 
     def switchProcess(self, cmd: str):
         """ switch ?  prints all processes
@@ -196,10 +199,10 @@ class ProcessManager:
         else:  # look for number
             try:
                 if cmd.isnumeric():
-                    pid= int(cmd)
+                    pid = int(cmd)
                     assert pid in list(proc.getPid() for proc in self.processList)
                 else:
-                    pid= self.named_processes[cmd]
+                    pid = self.named_processes[cmd]
 
             except (AssertionError, KeyError):
                 return "not found"
@@ -218,7 +221,7 @@ class ProcessManager:
                 except StopIteration:
                     return "no process with pid %d" % pid
             self.currentProcess = proc
-            return "switched to %d\n%s" % (pid , self.currentProcess.where())
+            return "switched to %d\n%s" % (pid, self.currentProcess.where())
         else:
             ind = processList.index(self.getCurrentProcess())
             nextproc = processList[(ind + 1) % len(processList)]
@@ -229,17 +232,28 @@ class ProcessManager:
         return self.getCurrentProcess().finish()
 
     def family(self):
-        """if no argument is given, print all children of current process
-        if argument is given, print all processes and highlight current process"""
-        pidstr = str(self.getCurrentProcess().getPid())
-        proc = self.processList[0]
+        curr_pid = self.getCurrentProcess().getPid()
 
-        tree= proc.getFamily()
-        replace_with = COLOR_CURRENT_PROCESS + pidstr + COLOR_NORMAL
-        result= tree.replace(pidstr, replace_with)
+        def getRepr(procWrap: ProcessWrapper):
+            pid = procWrap.getPid()
+            name = ""
+            if pid in self.named_processes:
+                name = "(%s)" % self.named_processes[pid]
 
-        print(result, "in procmanag")
-        return result
+            as_str = "%d  %s" % (pid, name)
+            if pid == curr_pid:
+                as_str = COLOR_CURRENT_PROCESS + as_str + COLOR_NORMAL
+
+            return as_str
+
+        def getChildren(procWrap: ProcessWrapper):
+            return procWrap.children
+
+        root_proc = self.processList[0]
+
+        tree = format_tree(root_proc, getRepr, getChildren)
+
+        return tree
 
     def write(self, text):
         procWrap = self.getCurrentProcess()
@@ -281,7 +295,6 @@ class ProcessManager:
         pids = [procWrap.getPid() for procWrap in self.processList]
         for pid in reversed(pids):
             kill(pid, SIGKILL)
-
 
 
 TRACE_SYSCALL_ARGS = compile_regex(r"(not )?([\w]+)")

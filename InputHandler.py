@@ -65,6 +65,9 @@ class InputHandler:
 
             result = self.switch(cmd)
 
+        elif cmd.startswith("tree"):
+            result = self.switch("switch ?")
+
         elif cmd.startswith("b"):
 
             result = manager.addBreakpoint(cmd)
