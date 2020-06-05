@@ -17,6 +17,8 @@ from utilsFolder.tree import format_tree
 
 from utilsFolder.PaulaPoll import BiDict
 
+from logging2 import debug
+
 from os import kill
 from signal import SIGKILL
 
@@ -77,7 +79,7 @@ class ProcessManager:
         currProc = self.getCurrentProcess()
         args = [parseInteger(arg, currProc) for arg in argstr.split()]
 
-        print("trying function %s with args %s" % (funcname, args))
+        debug("trying function %s with args %s" % (funcname, args))
         try:
             return self.getCurrentProcess().callFunction(funcname, *args)
         except ProcessEvent as event:

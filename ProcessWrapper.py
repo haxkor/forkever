@@ -116,6 +116,7 @@ class ProcessWrapper:
             self._copyBreakpoints()
 
             self.heap = None
+            self.own_segment = parent.own_segment
 
             # if the process spawns new children for other purposes, it might load another library.
             # the loaded path could be determined TODO
