@@ -213,8 +213,6 @@ class InputHandler:
         print(args)
 
         if not args:
-            segment = "heap"
-            permissions = "rwp"
             init_args = MemorySegmentInitArgs("heap", "rwp", 0, 0, False, False)
         else:
             print(args.groups())
