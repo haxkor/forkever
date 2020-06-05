@@ -210,22 +210,27 @@ class InputHandler:
        hyx libc rp"""
         currentProcess = self.manager.getCurrentProcess()
         args = INIT_HYX_ARGS.match(cmd)
+        print(args)
 
         if not args:
             segment = "heap"
             permissions = "rwp"
+            init_args = MemorySegmentInitArgs("heap", "rwp", 0, 0, False, False)
         else:
+            print(args.groups())
             segment = args.group(1)
             permissions = args.group(2)
+            if permissions is None:
+                permissions = "rwp"
 
-        # if sliceoffsets are specified, convert the strings to int
-        convert_func = lambda slice_str: int(slice_str, 16) * 0x1000 if slice_str else 0
-        start, stop = map(convert_func, [args.group(4), args.group(6)])
-
-        init_args = MemorySegmentInitArgs(segment, permissions, start, stop,
-                                          start_nonzero=bool(args.group(5)),
-                                          stop_nonzero=bool(args.group(7))
-                                          )
+            # if sliceoffsets are specified, convert the strings to int
+            convert_func = lambda slice_str: int(slice_str, 16) * 0x1000 if slice_str else 0
+            start, stop = map(convert_func, [args.group(4), args.group(6)])
+    
+            init_args = MemorySegmentInitArgs(segment, permissions, start, stop,
+                                              start_nonzero=bool(args.group(5)),
+                                              stop_nonzero=bool(args.group(7))
+                                              )
 
         try:
             heap = Heap(currentProcess, init_args)
@@ -274,8 +279,8 @@ class InputHandler:
 
 
 INIT_HYX_ARGS = re.compile(
-    r"([\w./-]+)?"  # name of library
-    r" ([rwxps]+)?"  # permissions
+    r"([\w./-]+)"  # name of library
+    r"(?:\s+([rwxps]+))?"  # permissions
     r"( ?\["  # slicing
     r"([0-9a-fA-F]*)"
     r"(i?)"  # i for start_nonzero
