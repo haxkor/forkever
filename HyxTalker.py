@@ -1,18 +1,17 @@
 from socket import socket, AF_UNIX, SOCK_STREAM
 from subprocess import Popen
 from struct import pack, unpack
-from Constants import hyx_path, runargs, socketname
+from Constants import hyx_path, runargs, socketname, UPD_FROMPAULA_INSERT
 
 from utilsFolder.PaulaPoll import PaulaPoll
 
 from utilsFolder.HeapClass import Heap
 
-SZ_SIZET = 8
-
-from Constants import UPD_FROMPAULA_INSERT
 from logging2 import debug
 
 import os
+
+SZ_SIZET = 8
 
 
 class HyxTalker():
@@ -56,7 +55,7 @@ class HyxTalker():
         args = [hyx_path, "-offset", hex(offset), "-socket", self._socketname, filepath]
 
         if runargs:
-            #print(argsStr(args))
+            # print(argsStr(args))
             args = runargs + args
             self.hyxprocess = Popen(args)
         else:
