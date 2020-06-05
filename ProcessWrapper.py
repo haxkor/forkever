@@ -723,8 +723,6 @@ class ProcessWrapper:
             print("about to call syscall, returning")
             return
 
-
-
         # save state
         ip = proc.getInstrPointer()
         old_regs = proc.getregs()
@@ -756,10 +754,8 @@ class ProcessWrapper:
             result-= 2**64
             import errno
             if errno.EEXIST == -result:
-                print("mapping exists")
+                debug("mapping exists")
                 return self.get_own_segment(address*2)
-
-
 
         # restore state
         proc.writeBytes(ip, old_code)

@@ -10,6 +10,7 @@ from utilsFolder.HeapClass import Heap
 SZ_SIZET = 8
 
 from Constants import UPD_FROMPAULA_INSERT
+from logging2 import debug
 
 import os
 
@@ -96,8 +97,8 @@ class HyxTalker():
         length = self.heap.stop - self.heap.start
         self.hyxsock.send(pack("<Q", length))
         ret = self.hyxsock.send(self.heap.heapbytes)
-        print("sent %#x bytes" % ret)
-        print("heapbytes len= %x" % len(self.heap.heapbytes))
+        debug("sent %#x bytes" % ret)
+        debug("heapbytes len= %x" % len(self.heap.heapbytes))
 
     def getUpdate(self, isNextByte=False):
         """receive the changes made in Hyx and write them to Memory"""
