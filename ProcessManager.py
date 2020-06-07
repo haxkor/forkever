@@ -164,9 +164,9 @@ class ProcessManager:
 
         # make sure no duplicates are inserted, rename them if necessary
         if name in self.named_processes:
-            i=1
+            i = 1
             while name + "(%d)" % i in self.named_processes:
-                i+=1
+                i += 1
             name += "(%d)" % i
 
         if pid in self.named_processes:
@@ -249,9 +249,10 @@ class ProcessManager:
 
         return tree
 
-    def write(self, text):
+    def write(self, text: str):
         procWrap = self.getCurrentProcess()
-        procWrap.writeToBuf(text)
+        if text:
+            procWrap.writeToBuf(text)
 
     def print(self, cmd):
         return self.getCurrentProcess().print(cmd)

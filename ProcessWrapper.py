@@ -34,7 +34,9 @@ class LaunchArguments:
 PRINT_ARGS_REGEX = re.compile(r"([0-9]*)"
                               r"([ighbw]?)")
 
-write_arg_regex = re.compile(r"(b\"[\w\W]*\"|b\'[\w\W]*\')|([\w\W]*)")
+write_arg_regex = re.compile(
+    r"(pack\((\"?[<>]?[a-zA-Z]\",)?[ ]*((0x)?[0-9a-fA-F]+)\))|"    
+    r"(b\"[\w\W]*\"|b\'[\w\W]*\')|([\w\W]*)")
 
 inject_syscall_instr = pwn.asm("syscall", arch="amd64")
 
@@ -189,9 +191,18 @@ class ProcessWrapper:
         Upon a read syscall (trying to consume from stdin), the buffers contents are written to the actual stdin.
         This means that if you write to stdin and fork before consumption, both processes will get to consume
         what you have previously written."""
+
         match= write_arg_regex.match(text)
 
-        text= (match.group(2) + "\n").encode() if match.group(2) else eval(match.group(1))
+        if match.group(1):
+            fmt = match.group(2) if match.group(2) else "<Q"
+            val = match.group(3)
+            val = int(val, 16 if val.startswith("0x") else 10)
+            text = pack(fmt, val)
+        else:
+            text = (match.group(6) + "\n").encode() if match.group(6) \
+                                                    else eval(match.group(5))
+
         assert isinstance(text,bytes)
         print("writing ", text)
 
@@ -584,6 +595,9 @@ class ProcessWrapper:
             where_symbol, where_ad = self.programinfo.where(address)
         except ValueError as e:
             return str(e)
+        except FileNotFoundError as e:
+            where_symbol, where_ad = "", address
+
 
         # check if user specified some special formatting
         if "/" in instr:
