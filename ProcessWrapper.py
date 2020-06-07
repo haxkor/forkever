@@ -48,8 +48,7 @@ inject_syscall_instr = pwn.asm("syscall", arch="amd64")
 class ProcessWrapper:
     """Provides an easy way to redirect stdout and stderr using pipes. Write to the processes STDIN and read from STDOUT at any time! """
 
-    def __init__(self, args=None, debugger=None, redirect=False, parent=None, ptraceprocess=None,
-                 syscalls_to_trace=None):
+    def __init__(self, args=None, debugger=None, redirect=False, parent=None, ptraceprocess=None):
 
         self.syscall_options = FunctionCallOptions(
             write_types=True,
