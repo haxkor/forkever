@@ -381,16 +381,13 @@ class ProcessWrapper:
 
         func_ad = self.programinfo.getAddrOf(funcname)
         if func_ad is None:
-            print("function %s not found" % funcname)
-            return
+            return "function %s not found" % funcname
 
         proc = self.ptraceProcess
         if proc.syscall_state.next_event == "exit":
-            print("about to call syscall, returning")
-            return
+            return "about to call syscall, returning"
         if self.inserted_function_data:
-            print("already in an inserted function, returning")
-            return
+            return "already in an inserted function, returning"
 
         inject_at = self.get_own_segment()
 
@@ -418,7 +415,7 @@ class ProcessWrapper:
         self.inserted_function_data = (ip, finish, oldregs, funcname)
 
         res = self.cont()
-        return "none" if res is None else res
+        return res if res else "none"
 
     def _afterCallFunction(self):
         proc = self.ptraceProcess
@@ -462,7 +459,8 @@ class ProcessWrapper:
                 if self.inserted_function_data and self.inserted_function_data[1] == ip:
                     return self._afterCallFunction()
 
-                elif ip - 1 in proc.breakpoints.keys():  # did we hit a breakpoint?
+                elif ip - 1 in proc.breakpoints.keys() and not singlestep:  # did we hit a breakpoint?
+                    debug("cont calls reinsertBreakpoint")
                     self.reinstertBreakpoint()
                     return "hit breakpoint at %#x" % (ip - 1)
 
@@ -483,7 +481,7 @@ class ProcessWrapper:
                 return self.cont(event.signum, singlestep)
 
         else:
-            print(event, type(event))
+            debug("encountered %s" % event)
             if isinstance(event, ProcessEvent):
                 raise event
 
@@ -512,6 +510,7 @@ class ProcessWrapper:
             else:
                 return count, self.writeBufToPipe(count)
 
+        # check if process is trying to read from stdin, if yes give him what we got
         if self.stdinRequested:
             if self.writeBufToPipe(self.stdinRequested) == 0:
                 return "no data to stdin was provided"
@@ -520,7 +519,7 @@ class ProcessWrapper:
         #
         '''this is the actual start of the function'''
         proc = self.ptraceProcess
-        assert isinstance(proc, PtraceProcess)  # useless comment:
+        assert isinstance(proc, PtraceProcess)
 
         # if we are continuing from a breakpoint, singlestep over the breakpoint and reinsert it.
         # if we are not singlestepping and did not hit a syscall / exceptional event, continue till next syscall
@@ -537,6 +536,7 @@ class ProcessWrapper:
             event = proc.waitEvent()
 
         if not isSysTrap(event):
+            debug(" getNextEvent returns %s" % event)
             return event
 
         state = proc.syscall_state
@@ -612,7 +612,6 @@ class ProcessWrapper:
 
         # special case, disassemble and return early
         if fmt == "i":
-            lines = []
             count_read = count
             grow_factor = .5
             while True:

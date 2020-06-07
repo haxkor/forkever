@@ -297,6 +297,9 @@ if __name__ == "__main__":
     path_to_hack = "/home/jasper/university/bx/pwn/oldpwn/pwn18/vuln"
     from ProcessWrapper import LaunchArguments
 
+    import pwn
+    pwn.context.log_level = "DEBUG"
+
     args = LaunchArguments([path_to_hack], False)
 
     i = InputHandler(args)
