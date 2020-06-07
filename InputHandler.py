@@ -1,19 +1,16 @@
-from utilsFolder.PaulaPoll import PaulaPoll
-from ProcessManager import ProcessManager
-from utilsFolder.PollableQueue import PollableQueue
 import re
-
 from select import POLLHUP, POLLIN
+
 from Constants import UPD_FROMBLOB, UPD_FROMBLOBNEXT, CMD_REQUEST
-
-from utilsFolder.InputReader import InputReader, InputSockReader
-from utilsFolder.HeapClass import Heap, MemorySegmentInitArgs
-
-from ProcessWrapper import ProcessWrapper, LaunchArguments
 from HyxTalker import HyxTalker
-from utilsFolder.Parsing import parseInteger
-from utilsFolder.Helper import my_help
+from ProcessManager import ProcessManager
+from ProcessWrapper import ProcessWrapper, LaunchArguments
 from logging2 import info, warning
+from utilsFolder.HeapClass import Heap, MemorySegmentInitArgs
+from utilsFolder.Helper import my_help
+from utilsFolder.InputReader import InputReader, InputSockReader
+from utilsFolder.PaulaPoll import PaulaPoll
+from utilsFolder.PollableQueue import PollableQueue
 
 
 class InputHandler:

@@ -1,26 +1,18 @@
+from os import kill
+from re import compile as compile_regex
+from signal import SIGKILL
+
 from Constants import FOLLOW_NEW_PROCS, COLOR_NORMAL, COLOR_CURRENT_PROCESS
 from ProcessWrapper import ProcessWrapper, LaunchArguments
-from ptrace.debugger.process_event import ProcessEvent, ProcessExit, NewProcessEvent, ProcessExecution
-
-from ptrace.debugger import PtraceDebugger, PtraceProcess
-
-from ptrace.func_call import FunctionCallOptions
-from ptrace.debugger.process import ProcessError
-
-from re import compile as compile_regex
-
-# hyx_path = "/"
-
-from utilsFolder.PaulaPoll import PaulaPoll
-from utilsFolder.Parsing import parseInteger
-from utilsFolder.tree import format_tree
-
-from utilsFolder.PaulaPoll import BiDict
-
 from logging2 import debug
-
-from os import kill
-from signal import SIGKILL
+from ptrace.debugger import PtraceDebugger, PtraceProcess
+from ptrace.debugger.process import ProcessError
+from ptrace.debugger.process_event import ProcessEvent, ProcessExit, NewProcessEvent, ProcessExecution
+from ptrace.func_call import FunctionCallOptions
+from utilsFolder.Parsing import parseInteger
+from utilsFolder.PaulaPoll import BiDict
+from utilsFolder.PaulaPoll import PaulaPoll
+from utilsFolder.tree import format_tree
 
 
 class ProcessManager:

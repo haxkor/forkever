@@ -1,30 +1,23 @@
-from utilsFolder.PaulaPipe import Pipe
-from utilsFolder.tree import format_tree
-
-from mmap import PROT_EXEC, PROT_READ, PROT_WRITE, MAP_PRIVATE, MAP_ANONYMOUS
-
-from ptrace.debugger.process import PtraceProcess, PtraceError
-from ptrace.debugger.process_event import ProcessExecution, ProcessEvent
-from subprocess import Popen
-from ptrace.debugger.ptrace_signal import ProcessSignal
+import re
+from mmap import PROT_EXEC, MAP_PRIVATE, MAP_ANONYMOUS
 from signal import SIGTRAP
-
-from utilsFolder.HeapClass import Heap
-
-from ptrace.func_call import FunctionCallOptions
-from Constants import (PRINT_BORING_SYSCALLS,
-                       SIGNALS_IGNORE, path_launcher, LOAD_PROGRAMINFO)
-
-from utilsFolder.Parsing import parseInteger
-
 from struct import iter_unpack, pack
+from subprocess import Popen
 
 import pwn
 
-from utilsFolder.ProgramInfo import ProgramInfo
+from Constants import (PRINT_BORING_SYSCALLS,
+                       SIGNALS_IGNORE, path_launcher, LOAD_PROGRAMINFO)
 from logging2 import info, debug
-import re
+from ptrace.debugger.process import PtraceProcess, PtraceError
+from ptrace.debugger.process_event import ProcessExecution, ProcessEvent
+from ptrace.debugger.ptrace_signal import ProcessSignal
+from ptrace.func_call import FunctionCallOptions
 from ptrace.tools import locateProgram
+from utilsFolder.Parsing import parseInteger
+from utilsFolder.PaulaPipe import Pipe
+from utilsFolder.ProgramInfo import ProgramInfo
+from utilsFolder.tree import format_tree
 
 
 class LaunchArguments:

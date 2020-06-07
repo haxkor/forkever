@@ -1,6 +1,6 @@
-from utilsFolder.PollableQueue import PollableQueue
 from sys import stdin
 from threading import Thread
+from utilsFolder.PollableQueue import PollableQueue
 
 
 class InputReader(Thread):

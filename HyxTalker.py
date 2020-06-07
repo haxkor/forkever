@@ -1,15 +1,12 @@
-from socket import socket, AF_UNIX, SOCK_STREAM
-from subprocess import Popen
-from struct import pack, unpack
-from Constants import hyx_path, runargs, socketname, UPD_FROMPAULA_INSERT
-
-from utilsFolder.PaulaPoll import PaulaPoll
-
-from utilsFolder.HeapClass import Heap
-
-from logging2 import debug
-
 import os
+from socket import socket, AF_UNIX, SOCK_STREAM
+from struct import pack, unpack
+from subprocess import Popen
+
+from Constants import hyx_path, runargs, socketname, UPD_FROMPAULA_INSERT
+from logging2 import debug
+from utilsFolder.HeapClass import Heap
+from utilsFolder.PaulaPoll import PaulaPoll
 
 SZ_SIZET = 8
 
