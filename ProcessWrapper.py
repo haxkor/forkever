@@ -95,7 +95,7 @@ class ProcessWrapper:
             self.debugger = debugger
             self.ptraceProcess = self.setupPtraceProcess()  # launches actual program, halts immediately
 
-            self.heap = None  # Heap(self.ptraceProcess.pid)
+            self.heap = None
 
             self.programinfo = ProgramInfo(args[1], self.getPid(), self)
 
@@ -120,7 +120,7 @@ class ProcessWrapper:
 
             # if the process spawns new children for other purposes, it might load another library.
             # the loaded path could be determined TODO
-            if LOAD_PROGRAMINFO:
+            if LOAD_PROGRAMINFO:    # can be disabled in Constants to improve performance
                 try:
                     self.programinfo = ProgramInfo(parent.programinfo.path_to_hack,
                                                    self.ptraceProcess.pid, self)
@@ -128,7 +128,8 @@ class ProcessWrapper:
                     self.programinfo = ProgramInfo(None, self.ptraceProcess.pid, self)
 
     def _copyBreakpoints(self):
-        """this is used to creaty new breakpoint python objects for a forked process"""
+        """this is used to creaty new breakpoint python objects for a forked process
+        It could be optimized to create these Breakpoints without reading/writing again"""
         debug("cloning breakpoints")
         from ptrace.debugger.process import Breakpoint
         debug(self.parent.ptraceProcess.breakpoints)
@@ -156,7 +157,7 @@ class ProcessWrapper:
         ptrace_proc.setoptions(self.debugger.options)
 
         # as soon as this variable is changed, process will launch. Here you can alter the process' personality
-        # warning: right now you can only SET flags, you CANNOT UNSET them
+        # warning: right now you can only SET flags, you CANNOT UNSET them. This feature can easily be added in launcher
         launcher_ELF = pwn.ELF(path_launcher, False)  # get ready to launch
         ad = launcher_ELF.symbols["add_personality"]
 
@@ -172,8 +173,6 @@ class ProcessWrapper:
 
         ptrace_proc.syscall()
         ptrace_proc.waitSyscall()
-        result = ptrace_proc.getreg("orig_rax")
-        assert result == 59, "execve syscall failed"
 
         return ptrace_proc
 
@@ -465,18 +464,16 @@ class ProcessWrapper:
                     return "hit breakpoint at %#x" % (ip - 1)
 
                 elif singlestep:
-                    return "ip=%#x" % ip
+                    return self.where()
 
                 else:
-                    print(event)
-                    print("ip= %#x" % ip, self.programinfo.where(ip))
-                    print(self.inserted_function_data)
+                    print(self.where(), event)
                     raise NotImplementedError
             else:
                 if event.signum in SIGNALS_IGNORE.values():
                     event.signum = 0
                 else:
-                    print("got %s, sending it back and continuing" % event)
+                    info("got %s, sending it back and continuing" % event)
 
                 return self.cont(event.signum, singlestep)
 
@@ -539,6 +536,7 @@ class ProcessWrapper:
             debug(" getNextEvent returns %s" % event)
             return event
 
+        # everything from hereon is just about dealing with syscalls
         state = proc.syscall_state
         syscall = state.event(self.syscall_options)
 
@@ -635,11 +633,15 @@ class ProcessWrapper:
                 else:
                     return "".join(lines)
 
+        # regular case
         size, unpack_fmt = size_modifiers[fmt]
         unpack_fmt = "<" + unpack_fmt
 
         # read data from memory and print it accordingly
-        bytesread = self.ptraceProcess.readBytes(address, size * count)
+        try:
+            bytesread = self.ptraceProcess.readBytes(address, size * count)
+        except PtraceError as e:
+            return str(e)
 
         # to print offset
         symbol_delta = address - where_ad
