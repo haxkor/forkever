@@ -1,7 +1,7 @@
 import re
 from mmap import PROT_EXEC, MAP_PRIVATE, MAP_ANONYMOUS
 from signal import SIGTRAP
-from struct import iter_unpack, pack
+from struct import iter_unpack, pack, error as struct_error
 from subprocess import Popen
 
 import pwn
@@ -23,7 +23,6 @@ from utilsFolder.tree import format_tree
 class LaunchArguments:
 
     def __init__(self, argvlist, random: bool):
-
         self.path = locateProgram(argvlist[0])
         print("path= ",self.path)
         argvlist[0] = self.path
@@ -35,7 +34,7 @@ PRINT_ARGS_REGEX = re.compile(r"([0-9]*)"
                               r"([ighbw]?)")
 
 write_arg_regex = re.compile(
-    r"(pack\((\"?[<>]?[a-zA-Z]\",)?[ ]*((0x)?[0-9a-fA-F]+)\))|"    
+    r"(pack\(\"?([<>][a-zA-Z])\"?,?[ ]*((0x)?[0-9a-fA-F]+)\))|"    
     r"(b\"[\w\W]*\"|b\'[\w\W]*\')|([\w\W]*)")
 
 inject_syscall_instr = pwn.asm("syscall", arch="amd64")
@@ -186,6 +185,7 @@ class ProcessWrapper:
         w AA
         w b"\x41\x41\n"
         w b'AA'     (no newline added)
+        w pack(123)
         If you write a normal string, a newline is added at the end.
         Note that it isnt directly written to its stdin, but instead written to an internal buffer.
         Upon a read syscall (trying to consume from stdin), the buffers contents are written to the actual stdin.
@@ -195,15 +195,23 @@ class ProcessWrapper:
         match= write_arg_regex.match(text)
 
         if match.group(1):
-            fmt = match.group(2) if match.group(2) else "<Q"
+            fmt = match.group(2) if match.group(2) else "<Q"   # remove , from fmt
             val = match.group(3)
+            print(val)
+            print(fmt)
             val = int(val, 16 if val.startswith("0x") else 10)
-            text = pack(fmt, val)
+            try:
+                text = pack(fmt, val)
+            except struct_error as e:
+                print(e)
+                return
+
+
         else:
             text = (match.group(6) + "\n").encode() if match.group(6) \
                                                     else eval(match.group(5))
 
-        assert isinstance(text,bytes)
+        assert isinstance(text,bytes), "%s" % type(text)
         print("writing ", text)
 
         self.stdin_buf += text
