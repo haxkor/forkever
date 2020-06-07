@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from argparse import ArgumentParser, REMAINDER
+
 import pwn
 
-from os import kill
-from signal import SIGKILL
-
-from argparse import ArgumentParser, REMAINDER
 from InputHandler import InputHandler
 from ProcessWrapper import LaunchArguments
-
 
 
 def main():
     pwn.context.log_level = "ERROR"
 
     def _handle_final_outputs(poll_res):
+        if not poll_res:
+            return
         outs = map(lambda poll_elem: poll_elem[0], poll_res)
 
         if any("out" in out for out in outs):
@@ -37,15 +36,9 @@ def main():
     try:
         handler.inputLoop()
     except KeyboardInterrupt:
-        #pids= [proc.pid for proc in handler.manager.debugger.list]
         handler.manager.quit()
 
-        #   for pid in pids:
-        #    kill(pid, SIGKILL)
-
-        poll_res = handler.inputPoll.poll(10)
-        if poll_res:
-            _handle_final_outputs(poll_res)
+        _handle_final_outputs(handler.inputPoll.poll(10))
 
         exit(1)
 
