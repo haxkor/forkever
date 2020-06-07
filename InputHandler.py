@@ -13,7 +13,7 @@ from ProcessWrapper import ProcessWrapper, LaunchArguments
 from HyxTalker import HyxTalker
 from utilsFolder.Parsing import parseInteger
 from utilsFolder.Helper import my_help
-from logging2 import info
+from logging2 import info, warning
 
 
 class InputHandler:
@@ -58,11 +58,7 @@ class InputHandler:
         elif cmd.startswith("fork"):
             result = self.fork(cmd)
 
-        elif cmd.startswith("proclist"):
-            print(manager.processList)
-
         elif cmd.startswith("sw"):  # switch
-
             result = self.switch(cmd)
 
         elif cmd.startswith("tree"):
@@ -175,15 +171,22 @@ class InputHandler:
         if check == CMD_REQUEST:
             cmd = hyxtalker.recvCommand()
             print("%s   (hyx)" % cmd)
-            result = self.execute(cmd)
-            print(result)
-            hyxtalker.sendCommandResponse(result)
+
+            if cmd.strip().startswith("fork"):
+                # if this would not be done, hyx would interpret the new heap (sent when forking) as the result from the command
+                hyxtalker.sendCommandResponse("forking")
+                result = self.execute(cmd)
+                print(result)
+            else:
+                result = self.execute(cmd)
+                print(result)
+                hyxtalker.sendCommandResponse(result)
 
         elif check == UPD_FROMBLOB or check == UPD_FROMBLOBNEXT:
             hyxtalker.getUpdate(isNextByte=(check == UPD_FROMBLOBNEXT))
 
         else:
-            print(check, event)
+            warning(check, event)
             raise NotImplementedError
 
     def handle_procout(self, name, fd, event):
