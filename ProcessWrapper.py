@@ -595,7 +595,7 @@ class ProcessWrapper:
             where_symbol, where_ad = self.programinfo.where(address)
         except ValueError as e:
             return str(e)
-        except FileNotFoundError as e:
+        except FileNotFoundError:   # happens if we inspect something that is not an ELF file
             where_symbol, where_ad = "", address
 
 
