@@ -210,12 +210,10 @@ class InputHandler:
        hyx libc rp"""
         currentProcess = self.manager.getCurrentProcess()
         args = INIT_HYX_ARGS.match(cmd)
-        print(args)
 
         if not args:
             init_args = MemorySegmentInitArgs("heap", "rwp", 0, 0, False, False)
         else:
-            print(args.groups())
             segment = args.group(1)
             permissions = args.group(2)
             if permissions is None:
@@ -234,8 +232,6 @@ class InputHandler:
             heap = Heap(currentProcess, init_args)
         except ValueError as e:
             return str(e)
-
-        print(heap.file_path)
 
         self.hyxTalker = HyxTalker(heap, self.inputPoll)
 
