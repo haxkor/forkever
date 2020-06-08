@@ -10,8 +10,7 @@ from ptrace.debugger.process import ProcessError
 from ptrace.debugger.process_event import ProcessEvent, ProcessExit, NewProcessEvent, ProcessExecution
 from ptrace.func_call import FunctionCallOptions
 from utilsFolder.Parsing import parseInteger
-from utilsFolder.PaulaPoll import BiDict
-from utilsFolder.PaulaPoll import PaulaPoll
+from utilsFolder.PaulaPoll import PaulaPoll, BiDict
 from utilsFolder.tree import format_tree
 
 TRACE_SYSCALL_ARGS = compile_regex(r"(not )?([\w]+)")

@@ -1,7 +1,7 @@
 import re
 from select import POLLHUP, POLLIN
 
-from Constants import UPD_FROMBLOB, UPD_FROMBLOBNEXT, CMD_REQUEST
+from Constants import UPD_FROMBLOB, UPD_FROMBLOBNEXT, CMD_REQUEST, CONT_AFTER_WRITE
 from HyxTalker import HyxTalker
 from ProcessManager import ProcessManager
 from ProcessWrapper import ProcessWrapper, LaunchArguments
@@ -51,6 +51,10 @@ class InputHandler:
         elif cmd.startswith("w"):
             _, _, cmd = cmd.partition(" ")
             result = manager.write(cmd)
+            if CONT_AFTER_WRITE:
+                if result:
+                    print(result)
+                result= manager.cont()
 
         elif cmd.startswith("fork"):
             result = self.fork(cmd)

@@ -32,6 +32,8 @@ RELATIVE_ADRESS_THRESHOLD = 0xFFffFFff
 PRINT_BORING_SYSCALLS = False  # all syscalls will be printed if true
 LOAD_PROGRAMINFO = True
 
+CONT_AFTER_WRITE = True     # no need to explicitly continue after writing to stdin
+
 # if this is true, you need to be careful to not continue on a process that is waiting on another process.
 # It also isnt really tested
 FOLLOW_NEW_PROCS = False

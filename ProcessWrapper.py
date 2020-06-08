@@ -8,7 +8,7 @@ import pwn
 
 from Constants import (PRINT_BORING_SYSCALLS,
                        SIGNALS_IGNORE, path_launcher, LOAD_PROGRAMINFO)
-from logging2 import info, debug
+from logging2 import info, debug, warning
 from ptrace.debugger.process import PtraceProcess, PtraceError
 from ptrace.debugger.process_event import ProcessExecution, ProcessEvent
 from ptrace.debugger.ptrace_signal import ProcessSignal
@@ -24,7 +24,7 @@ class LaunchArguments:
 
     def __init__(self, argvlist, random: bool):
         self.path = locateProgram(argvlist[0])
-        print("path= ",self.path)
+        print("path= ", self.path)
         argvlist[0] = self.path
         self.argvlist = argvlist
         self.random = random
@@ -34,10 +34,11 @@ PRINT_ARGS_REGEX = re.compile(r"([0-9]*)"
                               r"([ighbw]?)")
 
 write_arg_regex = re.compile(
-    r"(pack\(\"?([<>][a-zA-Z])\"?,?[ ]*((0x)?[0-9a-fA-F]+)\))|"    
+    r"(pack\(\"?([<>][a-zA-Z])\"?,?[ ]*((0x)?[0-9a-fA-F]+)\))|"
     r"(b\"[\w\W]*\"|b\'[\w\W]*\')|([\w\W]*)")
 
 inject_syscall_instr = pwn.asm("syscall", arch="amd64")
+
 
 class ProcessWrapper:
     """Provides an easy way to redirect stdout and stderr using pipes. Write to the processes STDIN and read from STDOUT at any time! """
@@ -113,11 +114,11 @@ class ProcessWrapper:
 
             # if the process spawns new children for other purposes, it might load another library.
             # the loaded path could be determined TODO
-            if LOAD_PROGRAMINFO:    # can be disabled in Constants to improve performance
+            if LOAD_PROGRAMINFO:  # can be disabled in Constants to improve performance
                 try:
                     self.programinfo = ProgramInfo(parent.programinfo.path_to_hack,
                                                    self.ptraceProcess.pid, self)
-                except ValueError as e:     # if another library is loaded instead of our initial executable
+                except ValueError as e:  # if another library is loaded instead of our initial executable
                     self.programinfo = ProgramInfo(None, self.ptraceProcess.pid, self)
 
     def _copyBreakpoints(self):
@@ -133,10 +134,9 @@ class ProcessWrapper:
             new_bp.old_bytes = bp.old_bytes
 
         # cover edge case where we just ran into a breakpoint (bp has been temporarily disabled)
-        ip= self.parent.remember_insert_bp
+        ip = self.parent.remember_insert_bp
         if ip:  # this var stores the address of where the bp has to be inserted
             self.insertBreakpoint(ip)
-
 
     def getHeap(self):
         return self.heap
@@ -179,7 +179,7 @@ class ProcessWrapper:
     def readMappings(self):
         return self.ptraceProcess.readMappings()
 
-    def writeToBuf(self, text:str):
+    def writeToBuf(self, text: str):
         """write to the processes stdin.
         Use:
         w AA
@@ -192,10 +192,10 @@ class ProcessWrapper:
         This means that if you write to stdin and fork before consumption, both processes will get to consume
         what you have previously written."""
 
-        match= write_arg_regex.match(text)
+        match = write_arg_regex.match(text)
 
         if match.group(1):
-            fmt = match.group(2) if match.group(2) else "<Q"   # remove , from fmt
+            fmt = match.group(2) if match.group(2) else "<Q"  # remove , from fmt
             val = match.group(3)
             print(val)
             print(fmt)
@@ -209,9 +209,9 @@ class ProcessWrapper:
 
         else:
             text = (match.group(6) + "\n").encode() if match.group(6) \
-                                                    else eval(match.group(5))
+                else eval(match.group(5))
 
-        assert isinstance(text,bytes), "%s" % type(text)
+        assert isinstance(text, bytes), "%s" % type(text)
         print("writing ", text)
 
         self.stdin_buf += text
@@ -282,11 +282,10 @@ class ProcessWrapper:
         event = process.waitEvent()
         from ptrace.debugger.process_event import NewProcessEvent
         if not isinstance(event, NewProcessEvent):
-            rax= process.getreg("rax") - 2**64
+            rax = process.getreg("rax") - 2 ** 64
             import errno
             print(errno.errorcode[-rax])
         assert isinstance(event, NewProcessEvent), str(event)
-
 
         process.syscall()  # exit fork syscall
         process.waitSyscall()
@@ -322,6 +321,7 @@ class ProcessWrapper:
 
     def getFamily(self):
         """print all children of the process"""
+
         def getRepr(procWrap: ProcessWrapper):
             return str(procWrap.getPid())
 
@@ -331,13 +331,13 @@ class ProcessWrapper:
         return format_tree(self, getRepr, getChildren)
 
     def insertBreakpoint(self, adress):
-        if not isinstance(adress,int):
+        if not isinstance(adress, int):
             adress = parseInteger(adress, self)
 
         if adress is None:
             return
 
-        result= self.ptraceProcess.createBreakpoint(adress)
+        result = self.ptraceProcess.createBreakpoint(adress)
         return result
 
     def reinstertBreakpoint(self):
@@ -416,7 +416,6 @@ class ProcessWrapper:
         oldregs = proc.getregs()
         ip = proc.getInstrPointer()
         finish = inject_at + len(inject_code)  # if ip==finish, call afterCallFunction
-
 
         info("inject_at= %x" % inject_at)
         proc.writeBytes(inject_at, inject_code)
@@ -603,9 +602,8 @@ class ProcessWrapper:
             where_symbol, where_ad = self.programinfo.where(address)
         except ValueError as e:
             return str(e)
-        except FileNotFoundError:   # happens if we inspect something that is not an ELF file
+        except FileNotFoundError:  # happens if we inspect something that is not an ELF file
             where_symbol, where_ad = "", address
-
 
         # check if user specified some special formatting
         if "/" in instr:
@@ -673,13 +671,11 @@ class ProcessWrapper:
         return result[1:]  # remove first newline
 
     def where(self):
-        ip= self.ptraceProcess.getInstrPointer()
+        ip = self.ptraceProcess.getInstrPointer()
         where_symbol, where_ad = self.programinfo.where(ip)
         delta = ip - where_ad
 
         return "RIP = %s + %#x" % (where_symbol, delta)
-
-
 
     def print(self, cmd: str):
         """print.  prefixing with * dereferences the result.
@@ -695,7 +691,7 @@ class ProcessWrapper:
 
     def getrlimit(self, resource):
         segment = self.get_own_segment() + 0x100
-        proc= self.ptraceProcess
+        proc = self.ptraceProcess
 
         regs = proc.getregs()
 
@@ -715,23 +711,21 @@ class ProcessWrapper:
         rax = proc.getreg("rax")
         import errno
 
-        print("rax = %x" % rax,  errno.errorcode[-(rax - 2**64)] if rax > 100 else rax)
+        print("rax = %x" % rax, errno.errorcode[-(rax - 2 ** 64)] if rax > 100 else rax)
 
         print("ip = %x" % proc.getInstrPointer())
 
         print(proc.readBytes(struct_ad, 100))
 
-
-
-    def get_own_segment(self, address=None):  #  0x7f00e1337e000
+    def get_own_segment(self, address=None):  # 0x7f00e1337e000
         """injects an MMAP syscall so we get our own page for code"""
         if self.own_segment:
             return self.own_segment
 
-        start= self.programinfo.getElfStart()
+        start = self.programinfo.getElfStart()
         address = address if address else start - 0x2000
 
-        print("adress = %x" % address)
+        debug("getownsegment adress = %x" % address)
         proc = self.ptraceProcess
 
         if proc.syscall_state.next_event == "exit":
@@ -745,7 +739,7 @@ class ProcessWrapper:
 
         # prepare mmap syscall
         MAP_FIXED_NOREPLACE = 1048576
-        prot =  PROT_EXEC   # PROT_READ | PROT_WRITE |
+        prot = PROT_EXEC  # PROT_READ | PROT_WRITE |
         mapflags = MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED_NOREPLACE
         length = 0x1000
 
@@ -764,13 +758,13 @@ class ProcessWrapper:
         proc.waitSyscall()
 
         result = proc.getreg("rax")
-        print("result= %x" % result)
-        if result > 2**63 - 1:
-            result-= 2**64
+        debug("result= %x" % result)
+        if result > 2 ** 63 - 1:
+            result -= 2 ** 64
             import errno
             if errno.EEXIST == -result:
-                debug("mapping exists")
-                return self.get_own_segment(address*2)
+                warning("mapping exists")
+                return self.get_own_segment(address * 2)
 
         # restore state
         proc.writeBytes(ip, old_code)
@@ -778,6 +772,3 @@ class ProcessWrapper:
 
         self.own_segment = result
         return self.own_segment
-
-
-
