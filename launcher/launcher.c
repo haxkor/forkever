@@ -22,16 +22,13 @@ int main(int argc, char** argv){
     rlim.rlim_cur = rlim.rlim_max;
     ret = setrlimit(RLIMIT_NPROC, &rlim);
 
-    printf("flag= %x\n", ADDR_NO_RANDOMIZE);
+    //printf("flag= %x\n", ADDR_NO_RANDOMIZE);
 
     current_personality=personality(NO_CHANGE);
-
     while( add_personality == NO_CHANGE){}
-
     personality(current_personality | add_personality);
 
-    printf("launching\nadd_personality= %#x", add_personality);
-
+    puts("go");
     execve(argv[1],argv + 1,0);
 }
 

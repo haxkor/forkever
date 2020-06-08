@@ -1,8 +1,9 @@
-b malloc
 trace write
 trace mmap
 c
 c
 malloc 0x100
+fork beforefree
+call libc:free 0x1a4
 hyx heap rwp
 c

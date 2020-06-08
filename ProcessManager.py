@@ -289,7 +289,10 @@ class ProcessManager:
     def quit(self):
         pids = [procWrap.getPid() for procWrap in self.processList]
         for pid in reversed(pids):
-            kill(pid, SIGKILL)
+            try:
+                kill(pid, SIGKILL)
+            except ProcessLookupError:
+                pass
 
 
 TRACE_SYSCALL_ARGS = compile_regex(r"(not )?([\w]+)")
