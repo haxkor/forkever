@@ -611,12 +611,12 @@ class ProcessWrapper:
         if "/" in instr:
             _, _, instr = instr.partition("/")
             args = PRINT_ARGS_REGEX.match(instr)
-            count = int(args.group(1))
+            count = int(args.group(1)) if args.group(1) else 1
             fmt = args.group(2)
 
             if fmt not in size_modifiers.keys() and fmt is not "i":
                 if fmt:
-                    info("fmt %s is not an option" % fmt)
+                    print("fmt %s is not an option" % fmt)
                 fmt = "w"
         else:
             count = 1
