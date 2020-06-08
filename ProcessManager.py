@@ -1,9 +1,9 @@
 from os import kill
 from re import compile as compile_regex
-from signal import SIGKILL
+from signal import SIGKILL, SIGCHLD
 
 from Constants import FOLLOW_NEW_PROCS, COLOR_NORMAL, COLOR_CURRENT_PROCESS
-from ProcessWrapper import ProcessWrapper, LaunchArguments
+from ProcessWrapper import ProcessWrapper, LaunchArguments, ProcessSignal
 from logging2 import debug
 from ptrace.debugger import PtraceDebugger, PtraceProcess
 from ptrace.debugger.process import ProcessError
@@ -99,11 +99,15 @@ class ProcessManager:
             return str(e).split(":")[0]  # happens if breakpoint is already set
 
     def _handle_ProcessEvent(self, event: ProcessEvent):
-        print("handleprocevent",event)
+
         def handle_Exit():
             procWrap = self.getCurrentProcess()
             procWrap.is_terminated = True
             if procWrap.parent:
+
+                # when a process exits, it sends a SIGCHLD signal to its parent indicating it is done
+                procWrap.parent.wait_for_SIGNAL(SIGCHLD)
+
                 return self.switchProcess(procWrap.parent.getPid())
             else:
                 if len(self.processList) > 1:

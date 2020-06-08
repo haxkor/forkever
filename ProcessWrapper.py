@@ -59,6 +59,7 @@ class ProcessWrapper:
         self.is_terminated = False
         self.syscalls_to_trace = parent.syscalls_to_trace if parent else None  # first will be set by ProcessManager
         self.own_segment = None
+        self._nop_addr = None
 
         if args:
             assert debugger is not None
@@ -111,6 +112,7 @@ class ProcessWrapper:
 
             self.heap = None
             self.own_segment = parent.own_segment
+            self._nop_addr = parent._nop_addr
 
             # if the process spawns new children for other purposes, it might load another library.
             # the loaded path could be determined TODO
@@ -409,7 +411,7 @@ class ProcessWrapper:
 
         argregs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]  # set new args (depends on calling convention)
         if len(args) > len(argregs):
-            raise ValueError("too many arguments supplied")
+            raise ValueError("too many arguments supplied")     # TODO add push(var) functionality
         for (val, reg) in zip(args, argregs):
             proc.setreg(reg, val)
 
@@ -772,3 +774,20 @@ class ProcessWrapper:
 
         self.own_segment = result
         return self.own_segment
+
+    def wait_for_SIGNAL(self, signal:int):
+        proc = self.ptraceProcess
+        if not self._nop_addr:
+            self._nop_addr = self.get_own_segment() + 0x200
+            proc.writeBytes(self._nop_addr, pwn.asm("nop\nint3"))    # TODO jmp 0
+
+        regs= proc.getregs()
+        proc.setInstrPointer(self._nop_addr)
+        proc.singleStep()
+        event = proc.waitEvent()
+
+        assert isinstance(event, ProcessSignal) and event.signum == signal
+
+        proc.setregs(regs)
+
+
