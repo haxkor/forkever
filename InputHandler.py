@@ -48,7 +48,7 @@ class InputHandler:
         elif cmd.startswith("c"):  # continue
             result = manager.cont()
 
-        elif cmd.startswith("w"):
+        elif cmd.startswith("w "):  # write
             _, _, cmd = cmd.partition(" ")
             result = manager.write(cmd)
             if CONT_AFTER_WRITE:
@@ -99,9 +99,12 @@ class InputHandler:
         elif cmd.startswith("trace"):
             result = manager.trace_syscall(cmd)
 
-        elif cmd.startswith("getsegment"):
+        elif cmd.startswith("getsegment") and False:
             _, _, cmd = cmd.partition(" ")
             result = manager.getCurrentProcess().get_own_segment()
+
+        elif cmd.startswith("where"):
+            result = manager.getCurrentProcess().where()
 
         elif cmd.startswith("?"):
             my_help(cmd)
@@ -114,13 +117,14 @@ class InputHandler:
     def inputLoop(self):
         print("type ? for help")
         while True:
+            skip_hyx_update = False
             poll_result = self.inputPoll.poll()
             assert len(poll_result) > 0
 
             if len(poll_result) == 1:
                 name, fd, event = poll_result[0]
                 if name == "hyx":
-                    self.handle_hyx(event)
+                    skip_hyx_update = self.handle_hyx(event)
                 elif name == "userinput":
                     self.handle_stdin()
                 elif "-out" in name:
@@ -141,7 +145,11 @@ class InputHandler:
                 info(poll_result)
 
             if self.hyxTalker:
-                self.hyxTalker.updateHyx()
+                try:
+                    self.hyxTalker.updateHyx()
+                except ValueError as e:
+                    warning("encountered %s when updating hyx" % e)
+                    self._switch_hyxtalker()
 
     def handle_stderr(self, event):
         stderr_prefix = "[ERR] %s"
@@ -157,6 +165,8 @@ class InputHandler:
             print(result)
 
     def handle_hyx(self, event):
+        """Handles incoming updates/ command requests from hyx etc
+            :return True if hyx shouldnt be  """
         hyxtalker = self.hyxTalker
 
         if event & POLLHUP:  # sock closed
@@ -292,6 +302,7 @@ if __name__ == "__main__":
     path_to_hack = "/home/jasper/university/barbeit/dummy/a.out"
     path_to_hack = "/home/jasper/university/barbeit/dummy/minimalloc"
     path_to_hack = "/home/jasper/university/bx/pwn/oldpwn/pwn18/vuln"
+    path_to_hack = "demo/vuln"
     from ProcessWrapper import LaunchArguments
 
     import pwn

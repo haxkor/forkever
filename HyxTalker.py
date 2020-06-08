@@ -149,6 +149,7 @@ class HyxTalker():
     def sendCommandResponse(self, cmd):
         if isinstance(cmd, str):
             cmd = cmd.encode()
+        assert isinstance(cmd, bytes)
         cmd = cmd[:0x100]
         self.hyxsock.send(cmd.ljust(0x100, b"\x00"))
 
