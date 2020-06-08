@@ -5,7 +5,7 @@ from ptrace.binding import (
     ptrace_cont, ptrace_syscall,
     ptrace_setregs,
     ptrace_peektext, ptrace_poketext,
-    ptrace_interrupt, ptrace_seize,  #add by jasper
+    ptrace_interrupt, ptrace_seize, ptrace_listen,  #add by jasper
     REGISTER_NAMES)
 from ptrace.os_tools import HAS_PROC, RUNNING_BSD, RUNNING_PYTHON3
 from ptrace.tools import dumpRegs
@@ -797,6 +797,10 @@ class PtraceProcess(object):
         assert self.is_seized==True
         ptrace_interrupt(self.pid)
         self.is_stopped=True
+
+    def listen(self):   # add by jasper
+        # i dont know how to set is_stopped because the process is in a weird state after this
+        ptrace_listen(self.pid)
 
     def notImplementedError(self):
         raise NotImplementedError()

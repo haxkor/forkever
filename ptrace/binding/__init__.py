@@ -8,7 +8,7 @@ from ptrace.binding.func import (   # noqa
     ptrace_setregs,
     ptrace_peektext, ptrace_poketext,
     ptrace_peekuser,
-    ptrace_seize, ptrace_interrupt,    #added by jasper
+    ptrace_seize, ptrace_interrupt, ptrace_listen,    #added by jasper
     ptrace_registers_t)
 if HAS_PTRACE_EVENTS:
     from ptrace.binding.func import (WPTRACEEVENT,   # noqa

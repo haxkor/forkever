@@ -18,6 +18,7 @@ elif RUNNING_LINUX:
     from ptrace.binding.linux_struct import (
         user_regs_struct as ptrace_registers_t,
         user_fpregs_struct, siginfo)
+
     if not CPU_64BITS:
         from ptrace.binding.linux_struct import user_fpxregs_struct
 else:
@@ -102,7 +103,6 @@ if RUNNING_LINUX:
     # Linux introduces the __WALL flag for wait
     THREAD_TRACE_FLAGS = 0x40000000
 
-
 PTRACE_O_TRACESYSGOOD = 0x00000001
 PTRACE_O_TRACEFORK = 0x00000002
 PTRACE_O_TRACEVFORK = 0x00000004
@@ -121,10 +121,13 @@ PTRACE_EVENT_EXIT = 6
 
 PTRACE_EVENT_STOP = 128
 ### cheap adds by jasper
-PTRACE_SEIZE= 0x4206
+PTRACE_SEIZE = 0x4206
+PTRACE_INTERRUPT = 0x4207
+PTRACE_LISTEN = 0x4208
 
 try:
     from cptrace import ptrace as _ptrace
+
     HAS_CPTRACE = True
 except ImportError:
     HAS_CPTRACE = False
@@ -154,7 +157,7 @@ def ptrace(command, pid=0, arg1=0, arg2=0, check_errno=False):
             # peek operations may returns -1 with errno=0:
             # it's not an error. For other operations, -1
             # is always an error
-            if not(check_errno) or errno:
+            if not (check_errno) or errno:
                 message = "ptrace(cmd=%s, pid=%s, %r, %r) error #%s: %s" % (
                     command, pid, arg1, arg2,
                     errno, strerror(errno))
@@ -170,16 +173,19 @@ def ptrace_attach(pid):
     ptrace(PTRACE_ATTACH, pid)
 
 
-def ptrace_seize(pid):      #add by jasper
+def ptrace_seize(pid):  # add by jasper
     ptrace(PTRACE_SEIZE, pid)
 
 
-def ptrace_interrupt(pid):  #add by jasper
+def ptrace_interrupt(pid):  # add by jasper
     import time
-    time.sleep(1)
-    PTRACE_INTERRUPT= 0x4207
-    ptrace(PTRACE_INTERRUPT,pid)
+    time.sleep(0.1)
+    ptrace(PTRACE_INTERRUPT, pid)
     print("interrupt done")
+
+
+def ptrace_listen(pid):  # add by jasper
+    ptrace(PTRACE_LISTEN, pid)
 
 
 def ptrace_detach(pid, signal=0):
@@ -234,8 +240,10 @@ if HAS_PTRACE_EVENTS:
     def WPTRACEEVENT(status):
         return status >> 16
 
+
     def ptrace_setoptions(pid, options):
         ptrace(PTRACE_SETOPTIONS, pid, 0, options)
+
 
     def ptrace_geteventmsg(pid):
         new_pid = pid_t()
@@ -246,30 +254,37 @@ if RUNNING_LINUX:
     def ptrace_syscall(pid, signum=0):
         ptrace(PTRACE_SYSCALL, pid, 0, signum)
 
+
     def ptrace_cont(pid, signum=0):
         ptrace(PTRACE_CONT, pid, 0, signum)
+
 
     def ptrace_getsiginfo(pid):
         info = siginfo()
         ptrace(PTRACE_GETSIGINFO, pid, 0, addressof(info))
         return info
 
+
     def ptrace_setsiginfo(pid, info):
         ptrace(PTRACE_SETSIGINFO, pid, 0, addressof(info))
+
 
     def ptrace_getfpregs(pid):
         fpregs = user_fpregs_struct()
         ptrace(PTRACE_GETFPREGS, pid, 0, addressof(fpregs))
         return fpregs
 
+
     def ptrace_setfpregs(pid, fpregs):
         ptrace(PTRACE_SETFPREGS, pid, 0, addressof(fpregs))
+
 
     if not CPU_64BITS:
         def ptrace_getfpxregs(pid):
             fpxregs = user_fpxregs_struct()
             ptrace(PTRACE_GETFPXREGS, pid, 0, addressof(fpxregs))
             return fpxregs
+
 
         def ptrace_setfpxregs(pid, fpxregs):
             ptrace(PTRACE_SETFPXREGS, pid, 0, addressof(fpxregs))
@@ -280,8 +295,10 @@ if RUNNING_LINUX:
             ptrace(PTRACE_GETREGS, pid, 0, addressof(regs))
             return regs
 
+
     def ptrace_setregs(pid, regs):
         ptrace(PTRACE_SETREGS, pid, 0, addressof(regs))
+
 
     if HAS_PTRACE_SINGLESTEP:
         def ptrace_singlestep(pid, signum=0):
@@ -291,8 +308,10 @@ else:
     def ptrace_syscall(pid, signum=0):
         ptrace(PTRACE_SYSCALL, pid, 1, signum)
 
+
     def ptrace_cont(pid, signum=0):
         ptrace(PTRACE_CONT, pid, 1, signum)
+
 
     if HAS_PTRACE_GETREGS:
         def ptrace_getregs(pid):
@@ -300,8 +319,10 @@ else:
             ptrace(PTRACE_GETREGS, pid, addressof(regs))
             return regs
 
+
     def ptrace_setregs(pid, regs):
         ptrace(PTRACE_SETREGS, pid, addressof(regs))
+
 
     if HAS_PTRACE_SINGLESTEP:
         def ptrace_singlestep(pid):
