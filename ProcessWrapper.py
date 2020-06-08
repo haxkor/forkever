@@ -407,7 +407,7 @@ class ProcessWrapper:
             int3""" % func_ad
         inject_code = pwn.asm(inject_code, arch="amd64")
 
-        argregs = ["rdi", "rsi", "rdx", "rcx", "r9", "r8"]  # set new args (depends on calling convention)
+        argregs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]  # set new args (depends on calling convention)
         if len(args) > len(argregs):
             raise ValueError("too many arguments supplied")
         for (val, reg) in zip(args, argregs):
