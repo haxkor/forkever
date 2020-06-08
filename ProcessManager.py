@@ -16,6 +16,7 @@ from utilsFolder.tree import format_tree
 
 TRACE_SYSCALL_ARGS = compile_regex(r"(not )?([\w]+)")
 
+
 class ProcessManager:
     def __init__(self, args: LaunchArguments, pollobj: PaulaPoll):
         self.pollobj = pollobj  # PollObj used by the input monitor, needed to register new processes
