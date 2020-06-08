@@ -54,7 +54,7 @@ class InputHandler:
             if CONT_AFTER_WRITE:
                 if result:
                     print(result)
-                result= manager.cont()
+                result = manager.cont()
 
         elif cmd.startswith("fork"):
             result = self.fork(cmd)
@@ -107,13 +107,16 @@ class InputHandler:
             result = manager.getCurrentProcess().where()
 
         elif cmd.startswith("name"):
-            _,_,cmd = cmd.partition(" ")
-            name,_,pid = cmd.partition(" ")
+            _, _, cmd = cmd.partition(" ")
+            pid, _, name = cmd.partition(" ")
 
-            if pid:
-                pid= int(pid)
-
-            result = manager.name_process(name,pid)
+            # first give pid, then name. if you only give name,
+            # first partition (currently pid) is actually name
+            if name:
+                pid = int(pid)
+            else:
+                name, pid = pid, 0
+            result = manager.name_process(name, pid)
 
         elif cmd.startswith("?"):
             my_help(cmd)
@@ -245,7 +248,7 @@ class InputHandler:
             # if sliceoffsets are specified, convert the strings to int
             convert_func = lambda slice_str: int(slice_str, 16) * 0x1000 if slice_str else 0
             start, stop = map(convert_func, [args.group(4), args.group(6)])
-    
+
             init_args = MemorySegmentInitArgs(segment, permissions, start, stop,
                                               start_nonzero=bool(args.group(5)),
                                               stop_nonzero=bool(args.group(7))
@@ -293,8 +296,6 @@ class InputHandler:
         self.hyxTalker.sendNewHeap(newHeap.start, newHeap.stop)
 
 
-
-
 INIT_HYX_ARGS = re.compile(
     r"([\w./-]+)"  # name of library
     r"(?:\s+([rwxps]+))?"  # permissions
@@ -315,6 +316,7 @@ if __name__ == "__main__":
     from ProcessWrapper import LaunchArguments
 
     import pwn
+
     pwn.context.log_level = "DEBUG"
 
     args = LaunchArguments([path_to_hack], False)
