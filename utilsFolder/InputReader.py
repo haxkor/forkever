@@ -5,6 +5,7 @@ from sys import stdin
 from threading import Thread
 
 from Constants import HOST, PORT
+from logging2 import debug
 from utilsFolder.PollableQueue import PollableQueue
 
 
@@ -20,11 +21,10 @@ class InputReader(Thread):
         self.start()
 
     def startup(self, file):
-        print("in startup")
         with open(file, "r") as f:
             for line in f.readlines():
                 self.stdinQ.put(line)
-                print("put %s" % line)
+                debug("put %s" % line)
 
     def run(self):
         lastcmd = b""
