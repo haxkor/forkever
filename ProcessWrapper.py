@@ -34,7 +34,7 @@ PRINT_ARGS_REGEX = re.compile(r"([0-9]*)"
                               r"([ighbw]?)")
 
 write_arg_regex = re.compile(
-    r"(pack\(\"?([<>][a-zA-Z])\"?,?[ ]*((0x)?[0-9a-fA-F]+)\))|"
+    r"(pack\(\"?([<>][a-zA-Z])?\"?,?[ ]*((0x)?[0-9a-fA-F]+)\))|"
     r"(b\"[\w\W]*\"|b\'[\w\W]*\')|([\w\W]*)")
 
 inject_syscall_instr = pwn.asm("syscall", arch="amd64")
@@ -187,7 +187,9 @@ class ProcessWrapper:
         w AA
         w b"\x41\x41\n"
         w b'AA'     (no newline added)
-        w pack(123)
+        w pack(421)     (equal to pack("<Q",421)
+        w pack(<I, 421)
+
         If you write a normal string, a newline is added at the end.
         Note that it isnt directly written to its stdin, but instead written to an internal buffer.
         Upon a read syscall (trying to consume from stdin), the buffers contents are written to the actual stdin.
@@ -199,8 +201,7 @@ class ProcessWrapper:
         if match.group(1):
             fmt = match.group(2) if match.group(2) else "<Q"  # remove , from fmt
             val = match.group(3)
-            print(val)
-            print(fmt)
+            debug("%s %s" % (val, fmt))
             val = int(val, 16 if val.startswith("0x") else 10)
             try:
                 text = pack(fmt, val)
