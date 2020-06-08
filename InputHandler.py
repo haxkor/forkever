@@ -106,6 +106,15 @@ class InputHandler:
         elif cmd.startswith("where"):
             result = manager.getCurrentProcess().where()
 
+        elif cmd.startswith("name"):
+            _,_,cmd = cmd.partition(" ")
+            name,_,pid = cmd.partition(" ")
+
+            if pid:
+                pid= int(pid)
+
+            result = manager.name_process(name,pid)
+
         elif cmd.startswith("?"):
             my_help(cmd)
 

@@ -87,7 +87,8 @@ class ProcessManager:
         _, _, name = cmd.partition(" ")
         if name:
             self.name_process(name, child.getPid())
-            self.name_process(name + "p", procWrap.getPid())
+            if procWrap.getPid() not in self.named_processes:   # by request of iead
+                self.name_process(name + "p", procWrap.getPid())
 
         return self.switchProcess(str(child.getPid()))
 
@@ -165,7 +166,7 @@ class ProcessManager:
                 return self._handle_ProcessEvent(event)
 
     def name_process(self, name, pid=None):
-        if pid is None:
+        if not pid:
             pid = self.getCurrentProcess().getPid()
 
         # make sure no duplicates are inserted, rename them if necessary
