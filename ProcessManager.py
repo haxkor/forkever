@@ -2,7 +2,7 @@ from os import kill
 from re import compile as compile_regex
 from signal import SIGKILL, SIGCHLD
 
-from Constants import FOLLOW_NEW_PROCS, COLOR_NORMAL, COLOR_CURRENT_PROCESS
+from Constants import FOLLOW_NEW_PROCS, COLOR_NORMAL, COLOR_CURRENT_PROCESS, COLOR_TERMINATED_PROCESS
 from ProcessWrapper import ProcessWrapper, LaunchArguments, ProcessSignal
 from logging2 import debug
 from ptrace.debugger import PtraceDebugger, PtraceProcess
@@ -243,6 +243,9 @@ class ProcessManager:
             as_str = "%d  %s" % (pid, name)
             if pid == curr_pid:
                 as_str = COLOR_CURRENT_PROCESS + as_str + COLOR_NORMAL
+            elif procWrap.is_terminated:
+                as_str = COLOR_TERMINATED_PROCESS + as_str + COLOR_NORMAL
+
 
             return as_str
 
