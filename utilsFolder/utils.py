@@ -1,10 +1,9 @@
-import ptrace.debugger.process as process
 import os
-import logging2
+import time
+import datetime
+
 
 def timestamp():
-    import datetime
-    import time
     timestamp = time.time()
     value = datetime.datetime.fromtimestamp(timestamp)
     return str(value.strftime('%H:%M:%S'))
@@ -12,6 +11,3 @@ def timestamp():
 
 tmppath = "/tmp/forkever-%s/" % timestamp()
 os.mkdir(tmppath)
-
-
-
