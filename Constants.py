@@ -14,11 +14,11 @@ SIGNALS_IGNORE = dict([("SIGCHLD", SIGCHLD)])
 
 SYSCALL_INSTR = asm("syscall")
 
+# ------- DONT MODIFY STUFF ABOVE ------  #
+
 COLOR_NORMAL = "\033[m"
 COLOR_CURRENT_PROCESS = "\033[0;31m"  # red
-COLOR_TERMINATED_PROCESS = "\033[0;34m"
-
-# ------- DONT MODIFY STUFF ABOVE ------  #
+COLOR_TERMINATED_PROCESS = "\033[0;34m" # blue
 
 hyx_path = locateProgram("../hyx4forkever/hyx")
 path_launcher = "launcher/launcher"
