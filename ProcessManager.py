@@ -13,7 +13,7 @@ from utilsFolder.Parsing import parseInteger
 from utilsFolder.PaulaPoll import PaulaPoll, BiDict
 from utilsFolder.tree import format_tree
 
-TRACE_SYSCALL_ARGS = compile_regex(r"(not )?([\w]+)")
+TRACE_SYSCALL_ARGS = compile_regex(r"(not )?([\w]+|\*)")
 
 
 class ProcessManager:
@@ -99,6 +99,7 @@ class ProcessManager:
             return str(e).split(":")[0]  # happens if breakpoint is already set
 
     def _handle_ProcessEvent(self, event: ProcessEvent):
+        print("handleprocevent",event)
         def handle_Exit():
             procWrap = self.getCurrentProcess()
             procWrap.is_terminated = True
@@ -271,19 +272,27 @@ class ProcessManager:
         cmd_match = TRACE_SYSCALL_ARGS.match(cmd)
         delete = bool(cmd_match.group(1))  # if "not" is present, delete
         syscall_name = cmd_match.group(2)
+        all_sys = cmd_match.group()
 
         syscall_list = self.syscalls_to_trace
+
+        def add_all_to_list():
+            self.syscalls_to_trace.extend(syscall for syscall in SYSCALL_NAMES.values()
+                                          if syscall not in self.syscalls_to_trace)
 
         if delete:
             if syscall_name in syscall_list:
                 syscall_list.remove(syscall_name)
+            elif syscall_name is "*":
+                self.syscalls_to_trace.clear()
+
             else:
                 return "not found. currently tracing " + " ".join(syscall_list)
-
         else:
-
             if syscall_name in SYSCALL_NAMES.values() and syscall_name not in syscall_list:
                 syscall_list.append(syscall_name)
+            elif syscall_name is "*":
+                add_all_to_list()
             else:
                 return "currently tracing " + " ".join(syscall_list)
 
@@ -294,5 +303,3 @@ class ProcessManager:
                 kill(pid, SIGKILL)
             except ProcessLookupError:
                 pass
-
-

@@ -23,8 +23,9 @@ class InputReader(Thread):
     def startup(self, file):
         with open(file, "r") as f:
             for line in f.readlines():
-                self.stdinQ.put(line)
-                debug("put %s" % line)
+                if len(line) > 0:
+                    self.stdinQ.put(line)
+                    debug("put %s" % line)
 
     def run(self):
         lastcmd = b""

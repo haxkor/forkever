@@ -2,6 +2,8 @@ from utilsFolder.MapsReader import getMappings
 from itertools import groupby
 import pwn
 from weakref import ref
+
+from logging2 import debug
 # from ProcessWrapper import ProcessWrapper
 from utilsFolder.Parsing import parseInteger
 
@@ -112,9 +114,11 @@ class ProgramInfo:
             if mapping.start <= ip <= mapping.end:
                 found = mapping
         if not found:
+            # TODO libc has a segment (where free_hook is) that has no name in maps
             raise ValueError("adress is not in virtual adress space")
 
         # find smaller symbols
+        debug(found.pathname)
         elf = self._getElf(found.pathname)
         symbols = list((symbolname, symbol_ad + elf.base) for
                        (symbolname, symbol_ad) in elf.symbols.items())
