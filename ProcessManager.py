@@ -14,6 +14,7 @@ from utilsFolder.PaulaPoll import BiDict
 from utilsFolder.PaulaPoll import PaulaPoll
 from utilsFolder.tree import format_tree
 
+TRACE_SYSCALL_ARGS = compile_regex(r"(not )?([\w]+)")
 
 class ProcessManager:
     def __init__(self, args: LaunchArguments, pollobj: PaulaPoll):
@@ -295,4 +296,3 @@ class ProcessManager:
                 pass
 
 
-TRACE_SYSCALL_ARGS = compile_regex(r"(not )?([\w]+)")
