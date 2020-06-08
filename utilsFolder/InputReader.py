@@ -1,10 +1,16 @@
+import os
+import socket
+from functools import partial
 from sys import stdin
 from threading import Thread
+
+from Constants import HOST, PORT
 from utilsFolder.PollableQueue import PollableQueue
 
 
 class InputReader(Thread):
     """listens for userinput"""
+
     def __init__(self, stdinQ: PollableQueue, startupfile=None):
         Thread.__init__(self, daemon=True)
         self.stdinQ = stdinQ
@@ -29,18 +35,15 @@ class InputReader(Thread):
                 lastcmd = line
             self.stdinQ.put(line.decode())
 
-from Constants import HOST, PORT
-import socket
-from functools import partial
-import os
 
 class InputSockReader(Thread):
     """Listens for input for processes STDIN.
     Output will be sent to the socket as well."""
+
     def __init__(self, stdinQ: PollableQueue):
         Thread.__init__(self, daemon=True)
         self.stdinQ = stdinQ
-        self.sock= socket.socket()
+        self.sock = socket.socket()
 
         self.start()
 
@@ -50,16 +53,11 @@ class InputSockReader(Thread):
         except FileNotFoundError:
             pass
 
-        self.sock.bind((HOST,PORT))
+        self.sock.bind((HOST, PORT))
         self.sock.listen(1)
-        self.acc_sock, _ = self.sock.accept()
+        acc_sock, _ = self.sock.accept()
 
-        f= partial(self.acc_sock.recv, 0x1000)
+        f = partial(acc_sock.recv, 0x1000)
         for line_bytes in iter(f, b""):
             line = "write %s \n" % str(line_bytes)
             self.stdinQ.put(line)
-
-
-
-
-
