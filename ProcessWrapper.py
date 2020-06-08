@@ -128,7 +128,7 @@ class ProcessWrapper:
         from ptrace.debugger.process import Breakpoint
         debug(self.parent.ptraceProcess.breakpoints)
         for bp in self.parent.ptraceProcess.breakpoints.values():
-            debug("bp=", bp)
+            debug("bp= %s" % bp)
             assert isinstance(bp, Breakpoint)
             new_bp = self.ptraceProcess.createBreakpoint(bp.address)
             new_bp.old_bytes = bp.old_bytes

@@ -10,7 +10,7 @@ def timestamp():
     return str(value.strftime('%H:%M:%S'))
 
 
-tmppath = "/tmp/paula-%s/" % timestamp()
+tmppath = "/tmp/forkever-%s/" % timestamp()
 os.mkdir(tmppath)
 
 
