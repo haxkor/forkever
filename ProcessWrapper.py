@@ -93,6 +93,8 @@ class ProcessWrapper:
 
             self.programinfo = ProgramInfo(args[1], self.getPid(), self)
 
+            self.wait_for_SIGNAL(0)     # setup own mmap page
+
         # this is used when a process is forked by user
         else:
             assert isinstance(parent, ProcessWrapper) and isinstance(ptraceprocess, PtraceProcess)
@@ -383,13 +385,17 @@ class ProcessWrapper:
             breakpoints/syscalls
             Does nothing if the process just entered syscall
 
-            use: call libc:memset $rbp 0x41 0x10
+            If you want to do something right after this syscall, singlestep over it.
+            If its a read(stdin) syscall, you need to "trace write"
+            or disable auto-continue for write  in Constants.py
 
-            How does is work:
+            use: call libc:memset $rbp 0x41 0x10
+            """
+        """How does this work:
             call mmap to map a page where we can inject code.
             the injected code will call the specified function.
             After the specified function is called, it runs into an interrupt.
-            The "contintue" logic will check for each received trap if we have
+            The "continue" logic will check for each received trap if we have
             reached this certain interrupt.
             Once that is the case, _afterCallFunction will be called"""
 
@@ -427,7 +433,7 @@ class ProcessWrapper:
 
         self.inserted_function_data = (ip, finish, oldregs, funcname)
 
-        res = self.cont()
+        res = self.cont()   # if you want to debug the injected function, change this to cont(singlestep=True)
         return res if res else "none"
 
     def _afterCallFunction(self):
@@ -782,6 +788,9 @@ class ProcessWrapper:
         if not self._nop_addr:
             self._nop_addr = self.get_own_segment() + 0x200
             proc.writeBytes(self._nop_addr, pwn.asm("nop\nint3"))    # TODO jmp 0
+
+            if not signal:  # if the function is called at setup
+                return
 
         regs= proc.getregs()
         proc.setInstrPointer(self._nop_addr)

@@ -33,6 +33,10 @@ class HyxTalker():
     You can use slicing syntax, [1:-3] will open the segment starting with an offset of 0x1000
     You can also trim the segment to start at the first page that has some non-zero bytes in it.
 
+    In hyx, you can
+        :!fork cool_child       execute commands just like in forkever itself
+        :free
+
     Example use:
     hyx heap [2:]
     hyx stack [i:i]
