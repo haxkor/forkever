@@ -178,10 +178,7 @@ def ptrace_seize(pid):  # add by jasper
 
 
 def ptrace_interrupt(pid):  # add by jasper
-    import time
-    time.sleep(0.1)
     ptrace(PTRACE_INTERRUPT, pid)
-    print("interrupt done")
 
 
 def ptrace_listen(pid):  # add by jasper
