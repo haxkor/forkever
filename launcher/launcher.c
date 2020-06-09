@@ -28,7 +28,7 @@ int main(int argc, char** argv){
     while( add_personality == NO_CHANGE){}
     personality(current_personality | add_personality);
 
-    puts("go");
+    //puts("go");
     execve(argv[1],argv + 1,0);
 }
 

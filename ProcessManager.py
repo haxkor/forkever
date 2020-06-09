@@ -67,7 +67,7 @@ class ProcessManager:
     def callFunction(self, cmd: str):
         _, _, cmd = cmd.partition(" ")
         funcname, _, argstr = cmd.partition(" ")
-        print(funcname, argstr)
+        debug(funcname, argstr)
 
         currProc = self.getCurrentProcess()
         args = [parseInteger(arg, currProc) for arg in argstr.split()]
@@ -87,7 +87,7 @@ class ProcessManager:
         _, _, name = cmd.partition(" ")
         if name:
             self.name_process(name, child.getPid())
-            if procWrap.getPid() not in self.named_processes:   # by request of iead
+            if procWrap.getPid() not in self.named_processes:  # by request of iead
                 self.name_process(name + "p", procWrap.getPid())
 
         return self.switchProcess(str(child.getPid()))
@@ -120,11 +120,11 @@ class ProcessManager:
         def handle_NewProcess(event):
             """this is called if a new process is created by the program (and not artificially by the user)"""
             new_ptrace_proc = self.debugger.list[-1]  # this process was just spawned
+            assert isinstance(new_ptrace_proc, PtraceProcess)
 
-            if FOLLOW_NEW_PROCS:
+            if FOLLOW_NEW_PROCS:  # enable in constants. this gets messy real fast
                 curr_proc = self.getCurrentProcess()
                 new_proc = ProcessWrapper(parent=curr_proc, ptraceprocess=new_ptrace_proc)
-                print("created newproc=", new_proc)
 
                 curr_proc.children.append(new_proc)
                 self.addProcess(new_proc)
@@ -135,8 +135,7 @@ class ProcessManager:
 
                 return str(event)
             else:
-                print("new process, running till exit")
-                assert isinstance(new_ptrace_proc, PtraceProcess)
+                print("new process, detaching and running till exit")
                 new_ptrace_proc.setoptions(0)
                 new_ptrace_proc.detach()
 
@@ -247,7 +246,6 @@ class ProcessManager:
             elif procWrap.is_terminated:
                 as_str = COLOR_TERMINATED_PROCESS + as_str + COLOR_NORMAL
 
-
             return as_str
 
         def getChildren(procWrap: ProcessWrapper):
@@ -256,9 +254,9 @@ class ProcessManager:
         root_proc = self.processList[0]
 
         if USE_ASCII:
-            tree = format_ascii_tree(root_proc, getRepr, getChildren)
+            return format_ascii_tree(root_proc, getRepr, getChildren)
         else:
-            tree = format_tree(root_proc, getRepr, getChildren)
+            return format_tree(root_proc, getRepr, getChildren)
 
         return tree
 
@@ -283,7 +281,6 @@ class ProcessManager:
         cmd_match = TRACE_SYSCALL_ARGS.match(cmd)
         delete = bool(cmd_match.group(1))  # if "not" is present, delete
         syscall_name = cmd_match.group(2)
-        all_sys = cmd_match.group()
 
         syscall_list = self.syscalls_to_trace
 

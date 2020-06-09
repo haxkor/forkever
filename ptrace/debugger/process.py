@@ -197,7 +197,6 @@ class PtraceProcess(object):
         else:
             self.is_seized=True
             ptrace_seize(self.pid)
-            print("done seizing")
 
         self.is_attached = True
 

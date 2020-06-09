@@ -24,7 +24,6 @@ class LaunchArguments:
 
     def __init__(self, argvlist, random: bool):
         self.path = locateProgram(argvlist[0])
-        print("path= ", self.path)
         argvlist[0] = self.path
         self.argvlist = argvlist
         self.random = random
@@ -208,7 +207,6 @@ class ProcessWrapper:
             except struct_error as e:
                 print(e)
                 return
-
 
         else:
             text = (match.group(6) + "\n").encode() if match.group(6) \
