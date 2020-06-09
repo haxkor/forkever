@@ -25,20 +25,25 @@ help_dict = {
 
 def available_commands():
     """
-    fork 
-    continue
-    single
+    continue (c)
+    single   (si)
+    write    (w)
+
+    breakpoint (b)
+
+    fork
+    switch
+        family
+        tree
+
     call
-    print
-    xamine
     malloc
     free
-    breakpoint
-    family
-    write
+
+    print   (p)
+    xamine  (x)
     maps
     trace
-    switch
     hyx
 
     Type ?command to get a detailed description"""
