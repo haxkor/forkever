@@ -66,8 +66,11 @@ class InputHandler:
             result = self.switch("switch ?")
 
         elif cmd.startswith("b"):
-
             result = manager.addBreakpoint(cmd)
+
+        elif cmd.startswith("rb"):
+            _,_, cmd = cmd.partition(" ")
+            result = manager.getCurrentProcess().removeBreakpoint(cmd)
 
         elif cmd.startswith("malloc"):
             result = manager.callFunction("call " + cmd)
@@ -79,7 +82,7 @@ class InputHandler:
             result = manager.finish()
 
         elif cmd.startswith("list b"):
-            print(manager.getCurrentProcess().ptraceProcess.breakpoints)
+            return manager.getCurrentProcess().ptraceProcess.breakpoints
 
         elif cmd.startswith("s"):
             result = manager.cont(singlestep=True)

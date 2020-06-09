@@ -370,13 +370,18 @@ class ProcessWrapper:
         return event
 
     def removeBreakpoint(self, address):
+        """removes breakpoint"""
+        if isinstance(address, str):
+            address = parseInteger(address, self)
+        assert isinstance(address,int)
+
         proc = self.ptraceProcess
         bp = proc.findBreakpoint(address)
         if not bp:
-            print("no breakpoint at %#x" % address)
+            return "no breakpoint at %#x" % address
         else:
-            proc.removeBreakpoint(bp)
-            print("breakpoint removed")
+            bp.desinstall()
+            return "breakpoint removed"
 
     def callFunction(self, funcname, *args, tillResult=False):
         """ Redirect control flow to call the specified function with given arguments.
