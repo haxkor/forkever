@@ -209,7 +209,6 @@ class ProcessWrapper:
                 print(e)
                 return
 
-
         else:
             text = (match.group(6) + "\n").encode() if match.group(6) \
                 else eval(match.group(5))

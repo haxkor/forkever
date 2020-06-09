@@ -67,7 +67,7 @@ class ProcessManager:
     def callFunction(self, cmd: str):
         _, _, cmd = cmd.partition(" ")
         funcname, _, argstr = cmd.partition(" ")
-        print(funcname, argstr)
+        debug(funcname, argstr)
 
         currProc = self.getCurrentProcess()
         args = [parseInteger(arg, currProc) for arg in argstr.split()]
