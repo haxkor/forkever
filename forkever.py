@@ -35,11 +35,12 @@ def main():
 
     try:
         handler.inputLoop()
+
+    # for now, Ctrl + C exits. The issue is that the event might abort
+    # a procedure right in the middle of it.
     except KeyboardInterrupt:
         handler.manager.quit()
-
         _handle_final_outputs(handler.inputPoll.poll(10))
-
         exit(1)
 
     except BaseException as e:
