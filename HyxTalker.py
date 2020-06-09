@@ -35,7 +35,9 @@ class HyxTalker():
 
     In hyx, you can
         :!fork cool_child       execute commands just like in forkever itself
-        :free
+        :f                      free address where your cursor is at
+        :1234                   jump to offset 1234    (relative to start of opened file)
+    use hyx --help for more info
 
     Example use:
     hyx heap [2:]
