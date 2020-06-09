@@ -120,11 +120,11 @@ class ProcessManager:
         def handle_NewProcess(event):
             """this is called if a new process is created by the program (and not artificially by the user)"""
             new_ptrace_proc = self.debugger.list[-1]  # this process was just spawned
+            assert isinstance(new_ptrace_proc, PtraceProcess)
 
-            if FOLLOW_NEW_PROCS:
+            if FOLLOW_NEW_PROCS:    # enable in constants. this gets messy real fast
                 curr_proc = self.getCurrentProcess()
                 new_proc = ProcessWrapper(parent=curr_proc, ptraceprocess=new_ptrace_proc)
-                print("created newproc=", new_proc)
 
                 curr_proc.children.append(new_proc)
                 self.addProcess(new_proc)
@@ -135,8 +135,7 @@ class ProcessManager:
 
                 return str(event)
             else:
-                print("new process, running till exit")
-                assert isinstance(new_ptrace_proc, PtraceProcess)
+                print("new process, detaching and running till exit")
                 new_ptrace_proc.setoptions(0)
                 new_ptrace_proc.detach()
 
