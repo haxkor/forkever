@@ -109,7 +109,9 @@ class ProcessManager:
                 # when a process exits, it sends a SIGCHLD signal to its parent indicating it is done
                 procWrap.parent.wait_for_SIGNAL(SIGCHLD)
 
-                return self.switchProcess(procWrap.parent.getPid())
+                result = self.switchProcess(procWrap.parent.getPid())
+                print(result)
+                return result
             else:
                 if len(self.processList) > 1:
                     return self.switchProcess("up")
