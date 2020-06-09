@@ -30,6 +30,7 @@ def available_commands():
     write    (w)
 
     breakpoint (b)
+    remove breakpoint (rb)
 
     fork
     switch
