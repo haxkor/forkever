@@ -789,6 +789,8 @@ class ProcessWrapper:
         return self.own_segment
 
     def wait_for_SIGNAL(self, signal:int):
+        """catches a signal without changing the state of the process
+        (except the own page mapping, but that is currently done at initialization of the process)(docstrings lie sometimes)"""
         proc = self.ptraceProcess
         if not self._nop_addr:
             self._nop_addr = self.get_own_segment() + 0x200
