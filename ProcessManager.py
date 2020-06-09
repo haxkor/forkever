@@ -87,7 +87,7 @@ class ProcessManager:
         _, _, name = cmd.partition(" ")
         if name:
             self.name_process(name, child.getPid())
-            if procWrap.getPid() not in self.named_processes:   # by request of iead
+            if procWrap.getPid() not in self.named_processes:  # by request of iead
                 self.name_process(name + "p", procWrap.getPid())
 
         return self.switchProcess(str(child.getPid()))
@@ -122,7 +122,7 @@ class ProcessManager:
             new_ptrace_proc = self.debugger.list[-1]  # this process was just spawned
             assert isinstance(new_ptrace_proc, PtraceProcess)
 
-            if FOLLOW_NEW_PROCS:    # enable in constants. this gets messy real fast
+            if FOLLOW_NEW_PROCS:  # enable in constants. this gets messy real fast
                 curr_proc = self.getCurrentProcess()
                 new_proc = ProcessWrapper(parent=curr_proc, ptraceprocess=new_ptrace_proc)
 
@@ -246,17 +246,13 @@ class ProcessManager:
             elif procWrap.is_terminated:
                 as_str = COLOR_TERMINATED_PROCESS + as_str + COLOR_NORMAL
 
-
             return as_str
 
         def getChildren(procWrap: ProcessWrapper):
             return procWrap.children
 
         root_proc = self.processList[0]
-
-        tree = format_tree(root_proc, getRepr, getChildren)
-
-        return tree
+        return format_tree(root_proc, getRepr, getChildren)
 
     def write(self, text: str):
         procWrap = self.getCurrentProcess()
@@ -279,7 +275,6 @@ class ProcessManager:
         cmd_match = TRACE_SYSCALL_ARGS.match(cmd)
         delete = bool(cmd_match.group(1))  # if "not" is present, delete
         syscall_name = cmd_match.group(2)
-        all_sys = cmd_match.group()
 
         syscall_list = self.syscalls_to_trace
 
