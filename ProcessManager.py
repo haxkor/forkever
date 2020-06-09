@@ -2,7 +2,7 @@ from os import kill
 from re import compile as compile_regex
 from signal import SIGKILL, SIGCHLD
 
-from Constants import FOLLOW_NEW_PROCS, COLOR_NORMAL, COLOR_CURRENT_PROCESS, COLOR_TERMINATED_PROCESS
+from Constants import FOLLOW_NEW_PROCS, COLOR_NORMAL, COLOR_CURRENT_PROCESS, COLOR_TERMINATED_PROCESS, USE_ASCII
 from ProcessWrapper import ProcessWrapper, LaunchArguments, ProcessSignal
 from logging2 import debug
 from ptrace.debugger import PtraceDebugger, PtraceProcess
@@ -11,7 +11,7 @@ from ptrace.debugger.process_event import ProcessEvent, ProcessExit, NewProcessE
 from ptrace.func_call import FunctionCallOptions
 from utilsFolder.Parsing import parseInteger
 from utilsFolder.PaulaPoll import PaulaPoll, BiDict
-from utilsFolder.tree import format_tree
+from utilsFolder.tree import format_tree, format_ascii_tree
 
 TRACE_SYSCALL_ARGS = compile_regex(r"(not )?([\w]+|\*)")
 
@@ -252,7 +252,13 @@ class ProcessManager:
             return procWrap.children
 
         root_proc = self.processList[0]
-        return format_tree(root_proc, getRepr, getChildren)
+
+        if USE_ASCII:
+            return format_ascii_tree(root_proc, getRepr, getChildren)
+        else:
+            return format_tree(root_proc, getRepr, getChildren)
+
+        return tree
 
     def write(self, text: str):
         procWrap = self.getCurrentProcess()

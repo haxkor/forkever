@@ -6,7 +6,7 @@ from subprocess import Popen
 
 import pwn
 
-from Constants import (PRINT_BORING_SYSCALLS,
+from Constants import (PRINT_BORING_SYSCALLS, USE_ASCII,
                        SIGNALS_IGNORE, path_launcher, LOAD_PROGRAMINFO)
 from logging2 import info, debug, warning
 from ptrace.debugger.process import PtraceProcess, PtraceError
@@ -17,7 +17,7 @@ from ptrace.tools import locateProgram
 from utilsFolder.Parsing import parseInteger
 from utilsFolder.PaulaPipe import Pipe
 from utilsFolder.ProgramInfo import ProgramInfo
-from utilsFolder.tree import format_tree
+from utilsFolder.tree import format_tree, format_ascii_tree
 
 
 class LaunchArguments:
@@ -329,7 +329,10 @@ class ProcessWrapper:
         def getChildren(procWrap: ProcessWrapper):
             return procWrap.children
 
-        return format_tree(self, getRepr, getChildren)
+        if USE_ASCII:
+            return format_ascii_tree(self, getRepr, getChildren)
+        else:
+            return format_tree(self, getRepr, getChildren)
 
     def insertBreakpoint(self, adress):
         if not isinstance(adress, int):
