@@ -10,7 +10,7 @@ UPD_FROMPAULA_INSERT = b"\x02"
 CMD_REQUEST = b"\x50"
 CMD_REQUEST_SUCCESS = b"\x51"
 
-SIGNALS_IGNORE = dict([("SIGCHLD", SIGCHLD)])
+SIGNALS_IGNORE = {}     #   dict([("SIGCHLD", SIGCHLD)])
 
 SYSCALL_INSTR = asm("syscall")
 
