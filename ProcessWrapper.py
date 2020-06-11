@@ -385,7 +385,7 @@ class ProcessWrapper:
 
     def callFunction(self, funcname, *args, tillResult=False):
         """ Redirect control flow to call the specified function with given arguments.
-            State will be restored as soon as function returns.
+            Registers will be restored as soon as function returns.
             If you dont see a result immediately, continue till you have stepped through all
             breakpoints/syscalls
             Does nothing if the process just entered syscall
