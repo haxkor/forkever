@@ -252,11 +252,12 @@ class ProcessWrapper:
 
     def forkProcess(self):
         """ forks the process. If the process just syscalled (and is trapped in the syscall entry),
-            the forked child starts just before that syscall.
+        the forked child starts just before that syscall.
 
-            The processManager will switch to the newly created child automatically.
+        The processManager will switch to the newly created child automatically.
 
-        How does it work?
+        Usage:  fork gonna_crash_this       (name is optional)"""
+        """How does it work?
         If the process is about to enter a syscall:
             Modify $rax to contain the "fork" syscall code.
         Else:
