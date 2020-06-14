@@ -288,7 +288,7 @@ class ProcessWrapper:
         if not isinstance(event, NewProcessEvent):
             rax = process.getreg("rax") - 2 ** 64
             import errno
-            print(errno.errorcode[-rax])
+            warning(errno.errorcode[-rax])
         assert isinstance(event, NewProcessEvent), str(event)
 
         process.syscall()  # exit fork syscall
