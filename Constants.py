@@ -32,7 +32,7 @@ runargs = ["x-terminal-emulator", "-e"]  # , "-e"]
 RELATIVE_ADRESS_THRESHOLD = 0xFFffFFff
 
 PRINT_BORING_SYSCALLS = False  # all syscalls will be printed if true
-LOAD_PROGRAMINFO = True
+LOAD_PROGRAMINFO = False
 
 CONT_AFTER_WRITE = True     # no need to explicitly continue after writing to stdin
 
