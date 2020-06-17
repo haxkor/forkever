@@ -7,6 +7,7 @@ UPD_FROMBLOB = b"\x40"
 UPD_FROMBLOBNEXT = b"\x41"
 UPD_FROMPAULA = b"\x01"
 UPD_FROMPAULA_INSERT = b"\x02"
+MSG_FROMPAULA = b"\x03"
 CMD_REQUEST = b"\x50"
 CMD_REQUEST_SUCCESS = b"\x51"
 
@@ -32,7 +33,7 @@ runargs = ["x-terminal-emulator", "-e"]  # , "-e"]
 RELATIVE_ADRESS_THRESHOLD = 0xFFffFFff
 
 PRINT_BORING_SYSCALLS = False  # all syscalls will be printed if true
-LOAD_PROGRAMINFO = False
+LOAD_PROGRAMINFO = True
 
 CONT_AFTER_WRITE = True     # no need to explicitly continue after writing to stdin
 

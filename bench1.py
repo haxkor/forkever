@@ -1,6 +1,7 @@
 from ProcessWrapper import ProcessWrapper, LaunchArguments
 from ProcessManager import ProcessManager
 from utilsFolder.PaulaPoll import PaulaPoll
+from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
 import os
@@ -13,9 +14,12 @@ from time import sleep
 from timeit import default_timer 
 import resource
 
+parser=ArgumentParser()
+parser.add_argument("num_children")
+
 print( resource.getrlimit(resource.RLIMIT_NPROC))
 
-args = ["ls"]
+args = ["demo/vuln"]
 launch_args = LaunchArguments(args, random=False)
 dummy_poll = PaulaPoll()
 
@@ -23,8 +27,8 @@ time_dict = dict()
 time_dict["start"] = default_timer()
 
 manager = ProcessManager(launch_args, dummy_poll)
-time_dict["launch"] = default_timer()
-num_children = 600
+args= parser.parse_args()
+num_children = int(args.num_children)
 
 monitor_args = "free -s 4.6 -w".split()
 monitor = Popen(monitor_args, stdout=PIPE)
@@ -34,8 +38,11 @@ top_monitor_args = "top -b -d 0.1".split()
 top_monitor = Popen(top_monitor_args, stdout=top_outfile)
 
 root_proc = manager.getCurrentProcess()
+root_proc.insertBreakpoint("main")
+root_proc.cont()
 new_procs = []
 
+time_dict["launch"] = default_timer()
 #root_proc.getrlimit(1)
 
 #new_procs = [root_proc.forkProcess() for _ in range(num_children)]
