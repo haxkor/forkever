@@ -44,6 +44,7 @@ class HyxTalker():
     hyx stack [i:i]
     hyx libc rp
     """
+
         # this docstring shouldnt really be here, but i dont want the
         # helper to import from inputhandler to avoid import an loop
 
@@ -61,7 +62,7 @@ class HyxTalker():
             args = runargs + args
             self.hyxprocess = Popen(args)
         else:
-            #pref = ["gdb -ex \"b updater.c:requestCommandPaula\"  --args"]
+            # pref = ["gdb -ex \"b updater.c:requestCommandPaula\"  --args"]
             pref = []
             print(argsStr(pref + args))  # incase spawning new window isnt possible
 
