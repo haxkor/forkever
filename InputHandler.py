@@ -25,6 +25,7 @@ class InputHandler:
         self.sock_reader = InputSockReader(self.stdinQ) if inputsock else None
 
         self.hyxTalker = None
+        self._errmsg_suffix = ""
 
     def execute(self, cmd):
         try:
@@ -168,7 +169,11 @@ class InputHandler:
 
     def handle_stderr(self, event):
         stderr_prefix = "[ERR] %s"
-        print(stderr_prefix % self.manager.getCurrentProcess().read(0x1000, "err"))
+        msg = stderr_prefix % self.manager.getCurrentProcess().read(0x1000, "err")
+        print(msg)
+        if self.hyxTalker:
+            self.hyxTalker.sendMessage(msg + self._errmsg_suffix)
+            self._errmsg_suffix = ""
 
     # this is called when a new line has been put to the stdinQ
     def handle_stdin(self):
@@ -223,6 +228,9 @@ class InputHandler:
             self.sock_reader.acc_sock.send(read_bytes)
 
         print("[OUT] %s" % read_bytes)
+        if self.hyxTalker:
+            self.hyxTalker.sendMessage("[OUT] %s" % read_bytes)
+
 
     def delete_hyx(self):
         self.hyxTalker.destroy(rootsock=True)
@@ -298,7 +306,10 @@ class InputHandler:
         self.hyxTalker.heap = newHeap
         self.hyxTalker.sendNewHeap(newHeap.start, newHeap.stop)
 
-        self.hyxTalker.sendMessage("switched to %d" % newProc.getPid())
+        msg = "switched to %d" % newProc.getPid()
+        self.hyxTalker.sendMessage(msg)
+
+        self._errmsg_suffix = "   " + msg   # next time stderr is printed, add this
 
 
 INIT_HYX_ARGS = re.compile(
