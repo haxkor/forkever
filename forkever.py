@@ -44,6 +44,8 @@ def main():
         exit(1)
 
     except BaseException as e:
+        print("oh noes, a bug! please copy everything and send it to haxkor")
+        print(handler.manager.family())
         handler.manager.quit() # otherwise launched children stay alive
         raise e
 
