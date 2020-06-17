@@ -3,7 +3,7 @@ from socket import socket, AF_UNIX, SOCK_STREAM
 from struct import pack, unpack
 from subprocess import Popen
 
-from Constants import hyx_path, runargs, socketname, UPD_FROMPAULA_INSERT
+from Constants import hyx_path, runargs, socketname, UPD_FROMPAULA_INSERT, MSG_FROMPAULA
 from logging2 import debug
 from utilsFolder.HeapClass import Heap
 from utilsFolder.PaulaPoll import PaulaPoll
@@ -44,9 +44,8 @@ class HyxTalker():
     hyx stack [i:i]
     hyx libc rp
     """
-
         # this docstring shouldnt really be here, but i dont want the
-        # helper to import from inputhandler to avoid import loop
+        # helper to import from inputhandler to avoid import an loop
 
         def argsStr(args):
             return "".join(arg + " " for arg in args)
@@ -158,6 +157,10 @@ class HyxTalker():
         assert isinstance(cmd, bytes)
         cmd = cmd[:0x100]
         self.hyxsock.send(cmd.ljust(0x100, b"\x00"))
+
+    def sendMessage(self, cmd):
+        self.hyxsock.send(MSG_FROMPAULA)
+        self.sendCommandResponse(cmd)
 
     def destroy(self, rootsock=False):
         self.poll.unregister(self.getSockFd())

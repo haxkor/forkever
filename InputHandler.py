@@ -298,6 +298,8 @@ class InputHandler:
         self.hyxTalker.heap = newHeap
         self.hyxTalker.sendNewHeap(newHeap.start, newHeap.stop)
 
+        self.hyxTalker.sendMessage("switched to %d" % newProc.getPid())
+
 
 INIT_HYX_ARGS = re.compile(
     r"([\w./-]+)"  # name of library

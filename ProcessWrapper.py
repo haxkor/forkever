@@ -29,16 +29,6 @@ class LaunchArguments:
         self.random = random
 
 
-class InsertedGadgets:
-    """bundles the addresses for the various inserted  instructions"""
-
-    def __init__(self, segmentstart: int, functioncall: int, nop: int, forkcode: int):
-        self.segmentstart = segmentstart
-        self.functioncall = functioncall
-        self.nop = nop
-        self.forkcode = forkcode
-
-
 PRINT_ARGS_REGEX = re.compile(r"([0-9]*)"
                               r"([ighbw]?)")
 
@@ -103,7 +93,7 @@ class ProcessWrapper:
 
             self.programinfo = ProgramInfo(args[1], self.getPid(), self)
 
-            self.wait_for_SIGNAL(0)  # setup own mmap page
+            self.wait_for_SIGNAL(0)     # setup own mmap page
 
         # this is used when a process is forked by user
         else:
@@ -384,7 +374,7 @@ class ProcessWrapper:
         """removes breakpoint"""
         if isinstance(address, str):
             address = parseInteger(address, self)
-        assert isinstance(address, int)
+        assert isinstance(address,int)
 
         proc = self.ptraceProcess
         bp = proc.findBreakpoint(address)
@@ -425,26 +415,31 @@ class ProcessWrapper:
         if self.inserted_function_data:
             return "already in an inserted function, returning"
 
-        oldregs = proc.getregs()
-        inject_at = self.get_own_segment().functioncall
+        inject_at = self.get_own_segment()
+
+        inject_code = """
+            mov rax, %#x
+            call rax
+            int3""" % func_ad
+        inject_code = pwn.asm(inject_code, arch="amd64")
 
         argregs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]  # set new args (depends on calling convention)
         if len(args) > len(argregs):
-            raise ValueError("too many arguments supplied")  # TODO add push(var) functionality
+            raise ValueError("too many arguments supplied")     # TODO add push(var) functionality
         for (val, reg) in zip(args, argregs):
             proc.setreg(reg, val)
 
+        oldregs = proc.getregs()
         ip = proc.getInstrPointer()
-        finish = inject_at + 3 # if ip==finish, call afterCalen(pwn.asm("call rax\nint3", arch="amd64")) llFunction
-        debug(proc.readBytes(inject_at+2,1))
+        finish = inject_at + len(inject_code)  # if ip==finish, call afterCallFunction
 
         info("inject_at= %x" % inject_at)
+        proc.writeBytes(inject_at, inject_code)
         proc.setInstrPointer(inject_at)
-        proc.setreg("rax",func_ad)
 
         self.inserted_function_data = (ip, finish, oldregs, funcname)
 
-        res = self.cont()  # if you want to debug the injected function, change this to cont(singlestep=True)
+        res = self.cont()   # if you want to debug the injected function, change this to cont(singlestep=True)
         return res if res else "none"
 
     def _afterCallFunction(self):
@@ -505,7 +500,6 @@ class ProcessWrapper:
                     event.signum = 0
                 else:
                     info("got %s, sending it back and continuing" % event)
-                    info(self.where())
 
                 return self.cont(event.signum, singlestep)
 
@@ -761,7 +755,7 @@ class ProcessWrapper:
 
         # prepare mmap syscall
         MAP_FIXED_NOREPLACE = 1048576
-        prot = PROT_EXEC
+        prot = PROT_EXEC  # PROT_READ | PROT_WRITE |
         mapflags = MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED_NOREPLACE
         length = 0x1000
 
@@ -792,37 +786,27 @@ class ProcessWrapper:
         proc.writeBytes(ip, old_code)
         proc.setregs(old_regs)
 
-        func_addr = address + 0x100
-        inject_code = """
-                    call rax
-                    int3
-                    int3
-                    int3"""
-        inject_code = pwn.asm(inject_code, arch="amd64")
-        proc.writeBytes(func_addr, inject_code)
-
-        nop_addr = address + 0x200
-        proc.writeBytes(nop_addr, pwn.asm("nop\nint3"))  # TODO jmp 0
-
-        fork_addr = address + 0x300
-
-        self.own_segment = InsertedGadgets(address, func_addr, nop_addr, fork_addr)
-
+        self.own_segment = result
         return self.own_segment
 
-    def wait_for_SIGNAL(self, signal: int):
+    def wait_for_SIGNAL(self, signal:int):
         """catches a signal without changing the state of the process
         (except the own page mapping, but that is currently done at initialization of the process)(docstrings lie sometimes)"""
-        if not signal:
-            return
         proc = self.ptraceProcess
+        if not self._nop_addr:
+            self._nop_addr = self.get_own_segment() + 0x200
+            proc.writeBytes(self._nop_addr, pwn.asm("nop\nint3"))    # TODO jmp 0
 
+            if not signal:  # if the function is called at setup
+                return
 
-        regs = proc.getregs()
-        proc.setInstrPointer(self.get_own_segment().nop)
+        regs= proc.getregs()
+        proc.setInstrPointer(self._nop_addr)
         proc.singleStep()
         event = proc.waitEvent()
 
         assert isinstance(event, ProcessSignal) and event.signum == signal
 
         proc.setregs(regs)
+
+
