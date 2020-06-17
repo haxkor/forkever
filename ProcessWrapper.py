@@ -746,7 +746,6 @@ class ProcessWrapper:
         """injects an MMAP syscall so we get our own page for code"""
         if self.own_segment:
             return self.own_segment
-        print("in get own segment")
 
         start = self.programinfo.getElfStart()
         address = address if address else start - 0x2000
