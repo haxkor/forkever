@@ -61,7 +61,8 @@ class HyxTalker():
             args = runargs + args
             self.hyxprocess = Popen(args)
         else:
-            pref = ["gdb -ex \"b updater.c:requestCommandPaula\"  --args"]
+            #pref = ["gdb -ex \"b updater.c:requestCommandPaula\"  --args"]
+            pref = []
             print(argsStr(pref + args))  # incase spawning new window isnt possible
 
         self.rootsock.listen(1)
