@@ -68,7 +68,6 @@ class ProcessWrapper:
         self.is_terminated = False
         self.syscalls_to_trace = parent.syscalls_to_trace if parent else None  # first will be set by ProcessManager
         self.own_segment = None
-        self._nop_addr = None
 
         if args:
             assert debugger is not None
@@ -103,7 +102,7 @@ class ProcessWrapper:
 
             self.programinfo = ProgramInfo(args[1], self.getPid(), self)
 
-            self.wait_for_SIGNAL(0)  # setup own mmap page
+            self.get_own_segment()  # setup own mmap page
 
         # this is used when a process is forked by user
         else:
@@ -123,7 +122,6 @@ class ProcessWrapper:
 
             self.heap = None
             self.own_segment = parent.own_segment
-            self._nop_addr = parent._nop_addr
 
             # if the process spawns new children for other purposes, it might load another library.
             # the loaded path could be determined TODO
