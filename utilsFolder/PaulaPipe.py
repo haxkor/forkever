@@ -7,7 +7,7 @@ PIPE_BUFSIZE = 4096
 
 class Pipe:
 
-    def __init__(self, flags=None, terminal=True):
+    def __init__(self, flags=0, terminal=False):
         """Creates a Pipe you can easily write to and read from. Default is to open up a pseudo-terminal.
             If you supply flags, pipe2 is used."""
 
