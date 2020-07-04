@@ -120,6 +120,8 @@ class ProcessWrapper:
             self.ptraceProcess = ptraceprocess
             self._copyBreakpoints()
 
+            self.remember_insert_bp = parent.remember_insert_bp
+
             self.heap = None
             self.own_segment = parent.own_segment
 
@@ -145,9 +147,10 @@ class ProcessWrapper:
             new_bp.old_bytes = bp.old_bytes
 
         # cover edge case where we just ran into a breakpoint (bp has been temporarily disabled)
-        ip = self.parent.remember_insert_bp
-        if ip:  # this var stores the address of where the bp has to be inserted
-            self.insertBreakpoint(ip)
+        if False:
+            ip = self.parent.remember_insert_bp
+            if ip:  # this var stores the address of where the bp has to be inserted
+                self.insertBreakpoint(ip)
 
     def getHeap(self):
         return self.heap
