@@ -35,8 +35,11 @@ class ProcessManager:
 
     def addProcess(self, proc: ProcessWrapper):
         self.processList.append(proc)
-        self.pollobj.register(proc.out_pipe.fileno("read"), "proc-out")
-        self.pollobj.register(proc.err_pipe.fileno("read"), "proc-err")
+
+        if self.pollobj:
+            self.pollobj.register(proc.out_pipe.fileno("read"), "proc-out")
+            self.pollobj.register(proc.err_pipe.fileno("read"), "proc-err")
+
         return proc
 
     def startDebugger(self, args):
