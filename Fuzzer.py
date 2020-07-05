@@ -14,7 +14,7 @@ import os
 ALP_START = "a"
 ALP_SIZE = 6
 
-redirect= False
+redirect = False
 
 out_file = open("/dev/null", "w")
 
@@ -36,13 +36,13 @@ class Fuzzer:
     def trimGeneration(self):
         split_at = 100
 
-        self.scores= list(set(self.scores))    # remove duplicates
+        self.scores = list(set(self.scores))  # remove duplicates
         self.scores.sort(key=itemgetter(1), reverse=True)
         self.scores = self.scores[:split_at]
         return self.scores
 
     def mutate_inputs(self):
-        #print("scores = %s" % self.scores)
+        # print("scores = %s" % self.scores)
         return [(self.mutate_single(inp), -1) for inp, _ in self.scores]
 
     def mutate_single(self, inp):
@@ -75,14 +75,13 @@ class Fuzzer:
             else:
                 self.evalGeneration()
 
-            #os.closerange(10, 1000)
+            # os.closerange(10, 1000)
 
         self.trimGeneration()
         return self.scores
 
 
-
-pwn.context.log_level = "ERROR"
+pwn.context.log_level = "WARNING"
 
 
 class NaiveFuzzer(Fuzzer):
@@ -125,13 +124,11 @@ class NaiveFuzzerForkever(Fuzzer):
         return int(out[1:-1])
 
 
-
-
-
 from ptrace.debugger.process_event import ProcessExit
 
 from signal import SIGTRAP
 import time
+
 
 class FuzzerForkserver(Fuzzer):
 
@@ -144,19 +141,19 @@ class FuzzerForkserver(Fuzzer):
         manager.cont()
         print(manager.getCurrentProcess().where())
 
-        #manager.getCurrentProcess().wait_for_SIGNAL(SIGTRAP)
+        # manager.getCurrentProcess().wait_for_SIGNAL(SIGTRAP)
 
     def evalGeneration(self):
-        inputs= [inp for inp,_ in self.mutate_inputs()]
+        inputs = [inp for inp, _ in self.mutate_inputs()]
         scores = [int(out[1:-1]) for out in self.tryinputs(inputs)]
 
-        self.scores += [(i,s) for i,s in zip(inputs, scores)]
+        self.scores += [(i, s) for i, s in zip(inputs, scores)]
         return self.scores
 
     def tryinputs(self, inputs):
-        os.closerange(30,1023)
+        os.closerange(30, 1023)
         procs = [self.manager.getCurrentProcess().forkProcess() for _ in inputs]
-        results= []
+        results = []
         print("inputs len %d" % len(inputs))
 
         for proc_wrap, inp in zip(procs, inputs):
@@ -167,7 +164,9 @@ class FuzzerForkserver(Fuzzer):
 
         return results
 
+
 from utilsFolder.ProgramInfo import ProgramInfo
+
 
 class ForkFuzzer(Fuzzer):
 
@@ -176,38 +175,36 @@ class ForkFuzzer(Fuzzer):
         args = LaunchArguments([path_to_fuzzme], False)
         self.manager = manager = ProcessManager(args, None)
 
-        #manager.addBreakpoint("b main")
+        # manager.addBreakpoint("b main")
         root_proc = manager.getCurrentProcess()
 
         root_proginfo = ProgramInfo(path, root_proc.getPid(), root_proc)
-        #break_at = root_proginfo.getAddrOf("main") + 0xb6
-        break_at = root_proginfo.baseDict[path] + 0x1251
-        #break_at = 0x555555555251
+
+        break_at = root_proginfo.getAddrOf("fgetc")
+        # break_at = root_proginfo.baseDict[path] + 0x1251
+        # break_at = 0x555555555251
         manager.addBreakpoint("b %d" % break_at)
         manager.cont()
         print(root_proc.where())
 
         self.pref_dict = dict([("", self.manager.getCurrentProcess())])
 
-    def get_prefix_child(self,inp:str):
+    def get_prefix_child(self, inp: str):
         # find longest matching prefix
-        inp_len= len(inp)
-        keys = filter(lambda k: len(k)<=inp_len and inp.startswith(k), self.pref_dict.keys())
+        inp_len = len(inp)
+        keys = filter(lambda k: len(k) <= inp_len and inp.startswith(k), self.pref_dict.keys())
         longest_pref = max(keys, key=len)
 
         # matching process for prefix, prefix, suffix
         return self.pref_dict[longest_pref], inp[:len(longest_pref)], inp[len(longest_pref):]
 
-    def evalInput(self, inp:str):
+    def evalInput(self, inp: str):
         root_parent, prefix, suffix = self.get_prefix_child(inp)
 
-        print("inp = %s prefix = %s,  suffix = %s,  dict = %s" % (inp, prefix, suffix, self.pref_dict.keys()))
+        # print("inp = %s prefix = %s,  suffix = %s,  dict = %s" % (inp, prefix, suffix, self.pref_dict.keys()))
 
         parent = root_parent.forkProcess()
-        print("forked first parent, pid = %d" % parent.getPid())
-        #root_parent.wait_for_SIGNAL(SIGCHLD)
 
-        prefix
         for c in suffix:
             parent.writeToBuf('b"%s"' % c)  # convert this so that no newline is added
             try:
@@ -227,34 +224,53 @@ class ForkFuzzer(Fuzzer):
         parent.ptraceProcess.detach()
         result = int(parent.out_pipe.read(100)[1:-1])
 
-        #print(parent.parent.where())
+        # print(parent.parent.where())
         parent.parent.wait_for_SIGNAL(SIGCHLD)
 
         return result
 
+import resource
+soft,hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+soft *= 64
+resource.setrlimit(resource.RLIMIT_NOFILE, (soft,hard))
 
-
-
-
-
+from timeit import default_timer
 
 if __name__ == '__main__':
     path = "fuzzme/fuzzme"
+    num_gens = 30
+    time_dict = dict()
+
+
     naive = NaiveFuzzer(path)
     random.seed(1)
-    # result_naive = naive.main(2000)
 
-    naive_fork = NaiveFuzzerForkever(path)
+    time_dict["naive_start"] = default_timer()
+    result_naive = naive.main(num_gens)
+    time_dict["naive_end"] = default_timer()
+
+
     random.seed(1)
+    naive_fork = NaiveFuzzerForkever(path)
     # result_naivefork = naive_fork.main(10)
 
+
+    random.seed(1)
     forkserver = FuzzerForkserver(path)
-    random.seed()
-    #result_forkserver = forkserver.main(40)
+    #result_forkserver = forkserver.main(num_gens)
 
+
+    time.sleep(2)
+
+    random.seed(1)
     forkfuzzer = ForkFuzzer(path)
-    result_forkfuzzer = forkfuzzer.main(13)
+    time_dict["forkfuzzer_start"] = default_timer()
+    result_forkfuzzer = forkfuzzer.main(num_gens)
+    time_dict["forkfuzzer_end"] = default_timer()
 
+
+    print( "naive time = ", time_dict["naive_end"] - time_dict["naive_start"])
+    print( "forkfuzzer time = ", time_dict["forkfuzzer_end"] - time_dict["forkfuzzer_start"])
 
 
 
