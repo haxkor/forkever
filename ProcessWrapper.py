@@ -301,7 +301,7 @@ class ProcessWrapper:
         from ptrace.debugger.process_event import NewProcessEvent
         if not isinstance(event, NewProcessEvent):
             rax = process.getreg("rax")
-            if rax >= 2**64:
+            if rax > 2**64:
                 converted_rax = -rax - 2 ** 64
                 warning(errno.errorcode[converted_rax])
             else:
@@ -514,8 +514,8 @@ class ProcessWrapper:
                 if event.signum in SIGNALS_IGNORE.values():
                     event.signum = 0
                 else:
-                    info("got %s, sending it back and continuing" % event)
-                    info(self.where())
+                    warning("got %s, sending it back and continuing" % event)
+                    # warning(self.where())
 
                 return self.cont(event.signum, singlestep)
 
