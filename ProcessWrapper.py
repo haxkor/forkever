@@ -19,6 +19,8 @@ from utilsFolder.PaulaPipe import Pipe
 from utilsFolder.ProgramInfo import ProgramInfo
 from utilsFolder.tree import format_tree, format_ascii_tree
 
+import errno
+
 
 class LaunchArguments:
 
@@ -298,9 +300,13 @@ class ProcessWrapper:
         event = process.waitEvent()
         from ptrace.debugger.process_event import NewProcessEvent
         if not isinstance(event, NewProcessEvent):
-            rax = process.getreg("rax") - 2 ** 64
-            import errno
-            warning(errno.errorcode[-rax])
+            rax = process.getreg("rax")
+            if rax >= 2**64:
+                converted_rax = -rax - 2 ** 64
+                warning(errno.errorcode[converted_rax])
+            else:
+                warning("%s" % event)
+
         assert isinstance(event, NewProcessEvent), str(event)
 
         process.syscall()  # exit fork syscall
@@ -806,7 +812,8 @@ class ProcessWrapper:
         proc.writeBytes(func_addr, inject_code)
 
         nop_addr = address + 0x200
-        proc.writeBytes(nop_addr, pwn.asm("nop\nint3"))  # TODO jmp 0
+        #proc.writeBytes(nop_addr, pwn.asm("nop\nint3"))  # TODO jmp 0
+        proc.writeBytes(nop_addr, b"\xeb\xfe")  # jumps to itself
 
         fork_addr = address + 0x300
         proc.writeBytes(fork_addr, inject_syscall_instr)
@@ -825,9 +832,9 @@ class ProcessWrapper:
 
         regs = proc.getregs()
         proc.setInstrPointer(self.get_own_segment().nop)
-        proc.singleStep()
+        proc.syscall()
         event = proc.waitEvent()
 
-        assert isinstance(event, ProcessSignal) and event.signum == signal
+        assert isinstance(event, ProcessSignal) and event.signum == signal , event.signum
 
         proc.setregs(regs)
