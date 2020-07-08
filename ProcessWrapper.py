@@ -305,7 +305,7 @@ class ProcessWrapper:
                 converted_rax = -rax - 2 ** 64
                 warning(errno.errorcode[converted_rax])
             else:
-                warning("%s" % event)
+                warning("unexpected %s in forkprocess" % event)
 
         assert isinstance(event, NewProcessEvent), str(event)
 

@@ -1,5 +1,6 @@
 from operator import itemgetter
 import random
+random.seed(5)
 
 import subprocess
 from ProcessWrapper import ProcessWrapper, LaunchArguments
@@ -14,7 +15,7 @@ import os
 ALP_START = "a"
 ALP_SIZE = 6
 
-redirect = False
+redirect = True
 
 out_file = open("/dev/null", "w")
 
@@ -31,12 +32,13 @@ class Fuzzer:
 
     def evalGeneration(self):
         self.trimGeneration()
-        self.scores = [(inp, self.evalInput(inp)) for (inp, oldscore) in self.scores + self.mutate_inputs()]
+        self.scores += [(inp, self.evalInput(inp)) for (inp, oldscore) in self.mutate_inputs()]
 
     def trimGeneration(self):
-        split_at = 100
+        split_at = 40
 
         self.scores = list(set(self.scores))  # remove duplicates
+        # self.scores = [ (inp, score - (len(inp)-score)*0.2) for (inp, score) in self.scores]    # deduce points for unneccessarily long words
         self.scores.sort(key=itemgetter(1), reverse=True)
         self.scores = self.scores[:split_at]
         return self.scores
@@ -63,8 +65,9 @@ class Fuzzer:
 
         return result
 
-    def main(self, num_generation):
-        self.scores = [("b", 0)]
+    def main(self, num_generation, seed=4):
+        random.seed(seed)
+        self.scores = [(chr(ord(ALP_START) + i), -9) for i in range(ALP_SIZE)]
         for i in range(num_generation):
             print("gen %d" % i)
             self.trimGeneration()
@@ -78,6 +81,7 @@ class Fuzzer:
             # os.closerange(10, 1000)
 
         self.trimGeneration()
+        print("randint = %d" % random.randint(0,99))
         return self.scores
 
 
@@ -144,6 +148,7 @@ class FuzzerForkserver(Fuzzer):
         # manager.getCurrentProcess().wait_for_SIGNAL(SIGTRAP)
 
     def evalGeneration(self):
+        self.trimGeneration()
         inputs = [inp for inp, _ in self.mutate_inputs()]
         scores = [int(out[1:-1]) for out in self.tryinputs(inputs)]
 
@@ -166,6 +171,7 @@ class FuzzerForkserver(Fuzzer):
 
 
 from utilsFolder.ProgramInfo import ProgramInfo
+from logging2 import *
 
 
 class ForkFuzzer(Fuzzer):
@@ -176,16 +182,16 @@ class ForkFuzzer(Fuzzer):
         self.manager = manager = ProcessManager(args, None)
 
         # manager.addBreakpoint("b main")
-        root_proc = manager.getCurrentProcess()
+        self.root_proc = manager.getCurrentProcess()
 
-        root_proginfo = ProgramInfo(path, root_proc.getPid(), root_proc)
+        self.root_proginfo = ProgramInfo(path, self.root_proc.getPid(), self.root_proc)
 
-        break_at = root_proginfo.getAddrOf("fgetc")
+        break_at = self.root_proginfo.getAddrOf("fgetc")
         # break_at = root_proginfo.baseDict[path] + 0x1251
         # break_at = 0x555555555251
         manager.addBreakpoint("b %d" % break_at)
         manager.cont()
-        print(root_proc.where())
+        print(self.root_proc.where())
 
         self.pref_dict = dict([("", self.manager.getCurrentProcess())])
 
@@ -203,7 +209,12 @@ class ForkFuzzer(Fuzzer):
 
         # print("inp = %s prefix = %s,  suffix = %s,  dict = %s" % (inp, prefix, suffix, self.pref_dict.keys()))
 
-        parent = root_parent.forkProcess()
+        # if something does not work with the process in the dict, remove it from the dict and try again
+        try:
+            parent = root_parent.forkProcess()
+        except AssertionError as e:
+            del self.pref_dict[prefix]
+            return self.evalInput(inp)
 
         for c in suffix:
             parent.writeToBuf('b"%s"' % c)  # convert this so that no newline is added
@@ -211,14 +222,18 @@ class ForkFuzzer(Fuzzer):
                 parent.cont()
             except ProcessExit:
                 parent.parent.wait_for_SIGNAL(SIGCHLD)
-                print("\noh no \n")
+                #warning("\noh no \n")
                 return -1
 
             prefix += c
             assert prefix not in self.pref_dict
             self.pref_dict[prefix] = parent
 
-            parent = parent.forkProcess()
+            try:
+                parent = parent.forkProcess()
+            except AssertionError as e:
+                print(e, "rip = %x" % parent.ptraceProcess.getInstrPointer())
+                # self.root_proginfo.where(parent.ptraceProcess.getInstrPointer())
 
         parent.in_pipe.write("\n")
         parent.ptraceProcess.detach()
@@ -229,18 +244,36 @@ class ForkFuzzer(Fuzzer):
 
         return result
 
+
 import resource
-soft,hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-soft *= 64
-resource.setrlimit(resource.RLIMIT_NOFILE, (soft,hard))
+
+soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+soft_filelimit = soft * 64
+resource.setrlimit(resource.RLIMIT_NOFILE, (soft_filelimit, hard))
+print("set filelimit")
 
 from timeit import default_timer
 
-if __name__ == '__main__':
-    path = "fuzzme/fuzzme"
-    num_gens = 30
-    time_dict = dict()
 
+def time_fuzzer(fuzzerClass: type, path: str, num_gens: int):
+    os.closerange(20, soft_filelimit - 2)
+
+    start = default_timer()
+    fuzzer = fuzzerClass(path)
+
+    result = fuzzer.main(num_gens)
+    end = default_timer()
+
+    del fuzzer
+    # time.sleep(10)
+
+    return result, (end - start)
+
+
+if __name__ == '__main__' : #and False:
+    path = "fuzzme/fuzzme"
+    num_gens = 10
+    time_dict = dict()
 
     naive = NaiveFuzzer(path)
     random.seed(1)
@@ -249,16 +282,13 @@ if __name__ == '__main__':
     result_naive = naive.main(num_gens)
     time_dict["naive_end"] = default_timer()
 
-
     random.seed(1)
     naive_fork = NaiveFuzzerForkever(path)
-    # result_naivefork = naive_fork.main(10)
-
+    result_naivefork = naive_fork.main(num_gens)
 
     random.seed(1)
     forkserver = FuzzerForkserver(path)
-    #result_forkserver = forkserver.main(num_gens)
-
+    result_forkserver = forkserver.main(num_gens)
 
     time.sleep(2)
 
@@ -268,9 +298,20 @@ if __name__ == '__main__':
     result_forkfuzzer = forkfuzzer.main(num_gens)
     time_dict["forkfuzzer_end"] = default_timer()
 
+    print("naive time = ", time_dict["naive_end"] - time_dict["naive_start"])
+    print("forkfuzzer time = ", time_dict["forkfuzzer_end"] - time_dict["forkfuzzer_start"])
 
-    print( "naive time = ", time_dict["naive_end"] - time_dict["naive_start"])
-    print( "forkfuzzer time = ", time_dict["forkfuzzer_end"] - time_dict["forkfuzzer_start"])
+from sys import argv
 
+path = "fuzzme/fuzzme"
+num_gens = 20
 
+if len(argv) > 1:
+    ind = int(argv[1])
+    to_test = [ForkFuzzer, NaiveFuzzer, NaiveFuzzerForkever, FuzzerForkserver][ind]
+    random.seed(3)
+    with redirect_stdout(out_file):
+        # print(str(to_test))
+        result = time_fuzzer(to_test, path, num_gens)
 
+    print(str(to_test), result)

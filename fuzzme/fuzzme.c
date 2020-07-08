@@ -5,6 +5,7 @@
 #define ALP_SIZE 6
 #define STATES_SIZE 10
 #define MAX_CHR (ALP_START + ALP_SIZE - 1)
+#define BUSY_COUNT 0x50000
 
 int trans[][7] = {
 { 0, 0, 0, 0, 0, 0, 0, },
@@ -28,11 +29,18 @@ int count_edges(){
     return result;
 }
 
+void busy(){
+    for (volatile int i=0; i< BUSY_COUNT; i++){};
+    return;
+}
+
+
 int main(){
     int input;
     int current_state=1;
 
     while(input= fgetc(stdin)){
+        busy();
 
 
         char input_char = (char) input;
