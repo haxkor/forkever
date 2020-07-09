@@ -14,6 +14,7 @@ CMD_REQUEST_SUCCESS = b"\x51"
 SIGNALS_IGNORE = {}      # dict([("SIGCHLD", SIGCHLD)])
 
 SYSCALL_INSTR = asm("syscall")
+DO_SYSCALL = False
 
 # ------- DONT MODIFY STUFF ABOVE ------  #
 
@@ -40,6 +41,7 @@ CONT_AFTER_WRITE = True     # no need to explicitly continue after writing to st
 # if this is true, you need to be careful to not continue on a process that is waiting on another process.
 # It also isnt really tested
 FOLLOW_NEW_PROCS = False
+
 
 # when looking up a symbol, other symbols matching the lookup will be printed
 PRINT_OTHER_CANDIDATES = False

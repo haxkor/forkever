@@ -6,7 +6,7 @@ from subprocess import Popen
 
 import pwn
 
-from Constants import (PRINT_BORING_SYSCALLS, USE_ASCII,
+from Constants import (PRINT_BORING_SYSCALLS, USE_ASCII, DO_SYSCALL,
                        SIGNALS_IGNORE, path_launcher, LOAD_PROGRAMINFO)
 from logging2 import info, debug, warning
 from ptrace.debugger.process import PtraceProcess, PtraceError
@@ -562,6 +562,7 @@ class ProcessWrapper:
 
         # if we are continuing from a breakpoint, singlestep over the breakpoint and reinsert it.
         # if we are not singlestepping and did not hit a syscall / exceptional event, continue till next syscall
+        cont_func = proc.syscall if DO_SYSCALL else proc.cont
         if self.remember_insert_bp:
             event = self._reinstertBreakpoint()
             if not singlestep and isTrap(event):
