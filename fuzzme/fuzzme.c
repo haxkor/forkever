@@ -5,7 +5,7 @@
 #define ALP_SIZE 6
 #define STATES_SIZE 10
 #define MAX_CHR (ALP_START + ALP_SIZE - 1)
-#define BUSY_COUNT 0x50000
+#define BUSY_COUNT 0x90000
 
 int trans[][7] = {
 { 0, 0, 0, 0, 0, 0, 0, },
