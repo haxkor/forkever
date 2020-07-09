@@ -19,6 +19,8 @@ redirect = True
 
 out_file = open("/dev/null", "w")
 
+def prand(s=""):
+    print(s,"rand %d" % random.randint(0, 99))
 
 class Fuzzer:
 
@@ -36,8 +38,18 @@ class Fuzzer:
 
     def trimGeneration(self):
         split_at = 40
+        def remove_duplicates():
+            newscores = []
+            for tup in self.scores:
+                if tup in self.scores and tup not in newscores:
+                    newscores.append(tup)
+            return newscores
 
-        self.scores = list(set(self.scores))  # remove duplicates
+
+        #self.scores = list(set(self.scores))  # remove duplicates
+        self.scores = remove_duplicates()
+
+
         # self.scores = [ (inp, score - (len(inp)-score)*0.2) for (inp, score) in self.scores]    # deduce points for unneccessarily long words
         self.scores.sort(key=itemgetter(1), reverse=True)
         self.scores = self.scores[:split_at]
@@ -65,8 +77,7 @@ class Fuzzer:
 
         return result
 
-    def main(self, num_generation, seed=4):
-        random.seed(seed)
+    def main(self, num_generation):
         self.scores = [(chr(ord(ALP_START) + i), -9) for i in range(ALP_SIZE)]
         for i in range(num_generation):
             print("gen %d" % i)
@@ -81,7 +92,6 @@ class Fuzzer:
             # os.closerange(10, 1000)
 
         self.trimGeneration()
-        print("randint = %d" % random.randint(0,99))
         return self.scores
 
 
@@ -100,7 +110,7 @@ class NaiveFuzzer(Fuzzer):
         return int(out[1:-1])
 
 
-from contextlib import redirect_stdout
+from contextlib import redirect_stdout, redirect_stderr
 from ptrace import PtraceError
 
 
@@ -168,6 +178,10 @@ class FuzzerForkserver(Fuzzer):
             self.manager.getCurrentProcess().wait_for_SIGNAL(SIGCHLD)
 
         return results
+
+    def __del__(self):
+        with redirect_stderr(out_file):
+            self.manager.debugger.quit()
 
 
 from utilsFolder.ProgramInfo import ProgramInfo
@@ -244,6 +258,10 @@ class ForkFuzzer(Fuzzer):
 
         return result
 
+    def __del__(self):
+        with redirect_stderr(out_file):
+            self.manager.debugger.quit()
+
 
 import resource
 
@@ -270,7 +288,8 @@ def time_fuzzer(fuzzerClass: type, path: str, num_gens: int):
     return result, (end - start)
 
 
-if __name__ == '__main__' : #and False:
+from sys import argv
+if __name__ == '__main__' and len(argv)==1:
     path = "fuzzme/fuzzme"
     num_gens = 10
     time_dict = dict()
@@ -301,7 +320,6 @@ if __name__ == '__main__' : #and False:
     print("naive time = ", time_dict["naive_end"] - time_dict["naive_start"])
     print("forkfuzzer time = ", time_dict["forkfuzzer_end"] - time_dict["forkfuzzer_start"])
 
-from sys import argv
 
 path = "fuzzme/fuzzme"
 num_gens = 20
@@ -311,7 +329,6 @@ if len(argv) > 1:
     to_test = [ForkFuzzer, NaiveFuzzer, NaiveFuzzerForkever, FuzzerForkserver][ind]
     random.seed(3)
     with redirect_stdout(out_file):
-        # print(str(to_test))
         result = time_fuzzer(to_test, path, num_gens)
 
     print(str(to_test), result)
