@@ -15,8 +15,9 @@ import os
 ALP_START = "a"
 ALP_SIZE = 6
 
-redirect = True
+redirect = 1
 
+log_file = open("fuzzme/results", "a")
 out_file = open("/dev/null", "w")
 
 def prand(s=""):
@@ -266,7 +267,7 @@ class ForkFuzzer(Fuzzer):
 import resource
 
 soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-soft_filelimit = soft * 64
+soft_filelimit = soft * 256
 resource.setrlimit(resource.RLIMIT_NOFILE, (soft_filelimit, hard))
 print("set filelimit")
 
@@ -322,13 +323,16 @@ if __name__ == '__main__' and len(argv)==1:
 
 
 path = "fuzzme/fuzzme"
-num_gens = 20
+num_gens = int(argv[2] if len(argv)>2 else 30)
 
 if len(argv) > 1:
     ind = int(argv[1])
     to_test = [ForkFuzzer, NaiveFuzzer, NaiveFuzzerForkever, FuzzerForkserver][ind]
-    random.seed(3)
-    with redirect_stdout(out_file):
+    random.seed(8)
+    if redirect:
+        with redirect_stdout(out_file):
+            result = time_fuzzer(to_test, path, num_gens)
+    else:
         result = time_fuzzer(to_test, path, num_gens)
 
-    print(str(to_test), result)
+    print(str(to_test),"num_gens = %d" % num_gens, result[0][0], result[1], file=log_file)
