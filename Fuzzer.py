@@ -2,6 +2,7 @@ from operator import itemgetter
 import random
 random.seed(5)
 
+from Constants import DO_SYSCALL
 import subprocess
 from ProcessWrapper import ProcessWrapper, LaunchArguments
 from ProcessManager import ProcessManager, SIGCHLD
@@ -14,6 +15,8 @@ import os
 
 ALP_START = "a"
 ALP_SIZE = 6
+
+split_at = 60
 
 redirect = 1
 
@@ -38,7 +41,6 @@ class Fuzzer:
         self.scores += [(inp, self.evalInput(inp)) for (inp, oldscore) in self.mutate_inputs()]
 
     def trimGeneration(self):
-        split_at = 40
         def remove_duplicates():
             newscores = []
             for tup in self.scores:
@@ -46,12 +48,10 @@ class Fuzzer:
                     newscores.append(tup)
             return newscores
 
-
-        #self.scores = list(set(self.scores))  # remove duplicates
         self.scores = remove_duplicates()
 
+        self.scores = [ (inp, score - (len(inp)-score)*0.2) for (inp, score) in self.scores]    # deduce points for unneccessarily long words
 
-        # self.scores = [ (inp, score - (len(inp)-score)*0.2) for (inp, score) in self.scores]    # deduce points for unneccessarily long words
         self.scores.sort(key=itemgetter(1), reverse=True)
         self.scores = self.scores[:split_at]
         return self.scores
@@ -231,8 +231,17 @@ class ForkFuzzer(Fuzzer):
             del self.pref_dict[prefix]
             return self.evalInput(inp)
 
+        def do_write(proc_wrap:ProcessWrapper, s:str):
+            if DO_SYSCALL:
+                proc_wrap.writeToBuf('b"%s"' % s) # convert this so that no newline is added
+            else:
+                proc_wrap.in_pipe.write(s)
+
+
+
         for c in suffix:
-            parent.writeToBuf('b"%s"' % c)  # convert this so that no newline is added
+            #parent.writeToBuf('b"%s"' % c)  # convert this so that no newline is added
+            do_write(parent, c)
             try:
                 parent.cont()
             except ProcessExit:
@@ -328,11 +337,13 @@ num_gens = int(argv[2] if len(argv)>2 else 30)
 if len(argv) > 1:
     ind = int(argv[1])
     to_test = [ForkFuzzer, NaiveFuzzer, NaiveFuzzerForkever, FuzzerForkserver][ind]
-    random.seed(8)
+    seed = int(argv[3] if len(argv) > 3 else 1)
+    random.seed(seed)
+
     if redirect:
         with redirect_stdout(out_file):
             result = time_fuzzer(to_test, path, num_gens)
     else:
         result = time_fuzzer(to_test, path, num_gens)
 
-    print(str(to_test),"num_gens = %d" % num_gens, result[0][0], result[1], file=log_file)
+    print(str(to_test),"num_gens = %d" % num_gens, result[0][0], result[1], "seed = %d" % seed, "DO_SYSCALL = %d" % DO_SYSCALL, file=log_file)
