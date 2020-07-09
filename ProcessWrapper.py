@@ -566,13 +566,13 @@ class ProcessWrapper:
         if self.remember_insert_bp:
             event = self._reinstertBreakpoint()
             if not singlestep and isTrap(event):
-                proc.syscall()
+                cont_func(signum)
                 event = proc.waitEvent()
         else:
             if singlestep:
                 proc.singleStep(signum)
             else:
-                proc.syscall(signum)
+                cont_func(signum)
             event = proc.waitEvent()
 
         if not isSysTrap(event):
