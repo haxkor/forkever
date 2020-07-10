@@ -57,7 +57,7 @@ class Fuzzer:
 
 
         self.scores.sort(key=itemgetter(1), reverse=True)
-        warning("%s" % self.scores)
+        #warning("%s" % self.scores)
 
         self.scores = self.scores[:split_at]
         return self.scores
