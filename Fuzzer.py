@@ -16,7 +16,7 @@ import os
 ALP_START = "a"
 ALP_SIZE = 6
 
-split_at = 60
+split_at = 30
 
 redirect = 1
 
@@ -50,9 +50,15 @@ class Fuzzer:
 
         self.scores = remove_duplicates()
 
-        self.scores = [ (inp, score - (len(inp)-score)*0.2) for (inp, score) in self.scores]    # deduce points for unneccessarily long words
+        #self.scores = [ (inp, score - (len(inp)-score)*0.2) for (inp, score) in self.scores]    # deduce points for unneccessarily long words
+
+        sortfunc = lambda s: len(s)
+        self.scores.sort(key=sortfunc)
+
 
         self.scores.sort(key=itemgetter(1), reverse=True)
+        warning("%s" % self.scores)
+
         self.scores = self.scores[:split_at]
         return self.scores
 
@@ -209,6 +215,7 @@ class ForkFuzzer(Fuzzer):
         print(self.root_proc.where())
 
         self.pref_dict = dict([("", self.manager.getCurrentProcess())])
+        self.spawned_procs = 0
 
     def get_prefix_child(self, inp: str):
         # find longest matching prefix
@@ -227,6 +234,7 @@ class ForkFuzzer(Fuzzer):
         # if something does not work with the process in the dict, remove it from the dict and try again
         try:
             parent = root_parent.forkProcess()
+            self.spawned_procs+=1
         except AssertionError as e:
             del self.pref_dict[prefix]
             return self.evalInput(inp)
@@ -255,6 +263,7 @@ class ForkFuzzer(Fuzzer):
 
             try:
                 parent = parent.forkProcess()
+                self.spawned_procs += 1
             except AssertionError as e:
                 print(e, "rip = %x" % parent.ptraceProcess.getInstrPointer())
                 # self.root_proginfo.where(parent.ptraceProcess.getInstrPointer())
@@ -269,8 +278,10 @@ class ForkFuzzer(Fuzzer):
         return result
 
     def __del__(self):
-        with redirect_stderr(out_file):
+        with redirect_stdout(out_file):
             self.manager.debugger.quit()
+
+        warning("spawned procs = %d" % self.spawned_procs)
 
 
 import resource

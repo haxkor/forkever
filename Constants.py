@@ -14,7 +14,7 @@ CMD_REQUEST_SUCCESS = b"\x51"
 SIGNALS_IGNORE = {}      # dict([("SIGCHLD", SIGCHLD)])
 
 SYSCALL_INSTR = asm("syscall")
-DO_SYSCALL = False
+DO_SYSCALL = True
 
 # ------- DONT MODIFY STUFF ABOVE ------  #
 
