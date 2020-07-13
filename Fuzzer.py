@@ -2,6 +2,9 @@ from operator import itemgetter
 import random
 random.seed(5)
 
+from numpy.random import geometric, seed as npseed
+
+
 from Constants import DO_SYSCALL
 import subprocess
 from ProcessWrapper import ProcessWrapper, LaunchArguments
@@ -19,9 +22,12 @@ ALP_SIZE = 6
 split_at = 30
 
 redirect = 1
+LOG_EVERY = 5
 
-log_file = open("fuzzme/results", "a")
-out_file = open("/dev/null", "w")
+SKIP_CHAR_CHANCE = 0.1
+
+#log_file = open("fuzzme/results", "a")
+#out_file = open("/dev/null", "w")
 
 def prand(s=""):
     print(s,"rand %d" % random.randint(0, 99))
@@ -37,14 +43,15 @@ class Fuzzer:
         raise NotImplementedError
 
     def evalGeneration(self):
-        self.trimGeneration()
-        self.scores += [(inp, self.evalInput(inp)) for (inp, oldscore) in self.mutate_inputs()]
+        edges_list = [(inp, self.evalInput(inp)) for (inp, oldscore) in self.mutate_inputs()]
+        self.scores += [ (inp, edges, edges - 0.4*(len(inp) - edges))  for inp,edges in edges_list]
+
 
     def trimGeneration(self):
         def remove_duplicates():
             newscores = []
             for tup in self.scores:
-                if tup in self.scores and tup not in newscores:
+                if tup not in newscores:
                     newscores.append(tup)
             return newscores
 
@@ -55,8 +62,7 @@ class Fuzzer:
         sortfunc = lambda s: len(s)
         self.scores.sort(key=sortfunc)
 
-
-        self.scores.sort(key=itemgetter(1), reverse=True)
+        self.scores.sort(key=itemgetter(2), reverse=True)
         #warning("%s" % self.scores)
 
         self.scores = self.scores[:split_at]
@@ -64,7 +70,7 @@ class Fuzzer:
 
     def mutate_inputs(self):
         # print("scores = %s" % self.scores)
-        return [(self.mutate_single(inp), -1) for inp, _ in self.scores]
+        return [(self.mutate_single(inp), -1) for inp, _, _ in self.scores]
 
     def mutate_single(self, inp):
         def change_char(char, delta):
@@ -72,10 +78,14 @@ class Fuzzer:
 
         inp_len = len(inp)
         num_changes = random.randint(0, inp_len)  # how many bytes to change
-        change_inds = random.sample(range(inp_len + 1), num_changes)  # which bytes to change
+        # change_inds = random.sample(range(inp_len + 1), num_changes)  # which bytes to change
+        change_inds = (1+inp_len) - geometric(0.2, num_changes)
 
         result = ""
         for i, char in enumerate(inp):
+            if random.random() < SKIP_CHAR_CHANCE:
+                continue
+
             delta = random.randint(0, ALP_SIZE) if i in change_inds else 0
             result += change_char(char, delta)
 
@@ -85,7 +95,8 @@ class Fuzzer:
         return result
 
     def main(self, num_generation):
-        self.scores = [(chr(ord(ALP_START) + i), -9) for i in range(ALP_SIZE)]
+        time_start = default_timer()
+        self.scores = [(chr(ord(ALP_START) + i), -9, -9) for i in range(ALP_SIZE)]
         for i in range(num_generation):
             print("gen %d" % i)
             self.trimGeneration()
@@ -96,7 +107,10 @@ class Fuzzer:
             else:
                 self.evalGeneration()
 
-            # os.closerange(10, 1000)
+            if i % LOG_EVERY == 0:
+                #warning(self.scores)
+                print(self.__class__, "gen %d" % i, self.scores[0], default_timer()-time_start,
+                      "seed= %d, DO_SYSCALL= %d" % (seed, DO_SYSCALL), file=log_file)
 
         self.trimGeneration()
         return self.scores
@@ -112,8 +126,8 @@ class NaiveFuzzer(Fuzzer):
             out = subprocess.check_output(self.path, input=input.encode())
             assert out.startswith(b",") and out.endswith(b".")
         except subprocess.CalledProcessError as e:
-            print(input, e)
-            return 0
+            warning("%s %s" % (input, e))
+            return -1
         return int(out[1:-1])
 
 
@@ -128,12 +142,18 @@ class NaiveFuzzerForkever(Fuzzer):
         try:
             manager = ProcessManager(args, None)
         except PtraceError as e:
-            print(e)
-            return 0
+            warning(e)
+            return -1
+
+        def do_write(proc_wrap:ProcessWrapper, s:str):
+            if DO_SYSCALL:
+                proc_wrap.writeToBuf('b"""%s"""' % s) # convert this so that no newline is added
+            else:
+                proc_wrap.in_pipe.write(s)
+
 
         proc_wrap = manager.getCurrentProcess()
-        proc_wrap.writeToBuf(input)
-        # proc_wrap.cont()
+        do_write(proc_wrap, input + "\n")
 
         try:
             manager.cont()
@@ -169,7 +189,7 @@ class FuzzerForkserver(Fuzzer):
         inputs = [inp for inp, _ in self.mutate_inputs()]
         scores = [int(out[1:-1]) for out in self.tryinputs(inputs)]
 
-        self.scores += [(i, s) for i, s in zip(inputs, scores)]
+        self.scores += [ (inp, edges, edges - 0.4*(len(inp) - edges))  for inp,edges in zip(inputs,scores)]
         return self.scores
 
     def tryinputs(self, inputs):
@@ -207,7 +227,7 @@ class ForkFuzzer(Fuzzer):
 
         self.root_proginfo = ProgramInfo(path, self.root_proc.getPid(), self.root_proc)
 
-        break_at = self.root_proginfo.getAddrOf("fgetc")
+        break_at = self.root_proginfo.getAddrOf("read")
         # break_at = root_proginfo.baseDict[path] + 0x1251
         # break_at = 0x555555555251
         manager.addBreakpoint("b %d" % break_at)
@@ -282,6 +302,7 @@ class ForkFuzzer(Fuzzer):
             self.manager.debugger.quit()
 
         warning("spawned procs = %d" % self.spawned_procs)
+        print("forkfuzzer spawned procs = %d" % self.spawned_procs, file=log_file)
 
 
 import resource
@@ -310,46 +331,21 @@ def time_fuzzer(fuzzerClass: type, path: str, num_gens: int):
 
 
 from sys import argv
-if __name__ == '__main__' and len(argv)==1:
-    path = "fuzzme/fuzzme"
-    num_gens = 10
-    time_dict = dict()
-
-    naive = NaiveFuzzer(path)
-    random.seed(1)
-
-    time_dict["naive_start"] = default_timer()
-    result_naive = naive.main(num_gens)
-    time_dict["naive_end"] = default_timer()
-
-    random.seed(1)
-    naive_fork = NaiveFuzzerForkever(path)
-    result_naivefork = naive_fork.main(num_gens)
-
-    random.seed(1)
-    forkserver = FuzzerForkserver(path)
-    result_forkserver = forkserver.main(num_gens)
-
-    time.sleep(2)
-
-    random.seed(1)
-    forkfuzzer = ForkFuzzer(path)
-    time_dict["forkfuzzer_start"] = default_timer()
-    result_forkfuzzer = forkfuzzer.main(num_gens)
-    time_dict["forkfuzzer_end"] = default_timer()
-
-    print("naive time = ", time_dict["naive_end"] - time_dict["naive_start"])
-    print("forkfuzzer time = ", time_dict["forkfuzzer_end"] - time_dict["forkfuzzer_start"])
 
 
-path = "fuzzme/fuzzme"
+path = "fuzzme/fuzzme_busy4_read"
 num_gens = int(argv[2] if len(argv)>2 else 30)
 
-if len(argv) > 1:
-    ind = int(argv[1])
-    to_test = [ForkFuzzer, NaiveFuzzer, NaiveFuzzerForkever, FuzzerForkserver][ind]
-    seed = int(argv[3] if len(argv) > 3 else 1)
+ind = int(argv[1])
+seed = int(argv[3] if len(argv) > 3 else 1)
+to_test = [ForkFuzzer, NaiveFuzzer, NaiveFuzzerForkever, FuzzerForkserver][ind]
+
+log_file = open("fuzzme/results%d-%d" % (ind, seed), "a")
+out_file = open("/dev/null", "w")
+
+for num_gens in [num_gens+1]: #range(30,90,5):
     random.seed(seed)
+    npseed(seed)
 
     if redirect:
         with redirect_stdout(out_file):
@@ -357,4 +353,5 @@ if len(argv) > 1:
     else:
         result = time_fuzzer(to_test, path, num_gens)
 
-    print(str(to_test),"num_gens = %d" % num_gens, result[0][0], result[1], "seed = %d" % seed, "DO_SYSCALL = %d" % DO_SYSCALL, file=log_file)
+    #print(str(to_test),"num_gens = %d" % num_gens, result[0][0], result[1], "seed = %d" % seed, "DO_SYSCALL = %d" % DO_SYSCALL, file=log_file)
+    os.closerange(out_file.fileno()+1, soft_filelimit)

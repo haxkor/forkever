@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #define ALP_START 'a'
 #define ALP_SIZE 6
 #define STATES_SIZE 10
 #define MAX_CHR (ALP_START + ALP_SIZE - 1)
-#define BUSY_COUNT 2 //0x90000
+#define BUSY_COUNT 0x40000
 
 int trans[][7] = {
 { 0, 0, 0, 0, 0, 0, 0, },
@@ -34,23 +35,24 @@ void busy(){
     return;
 }
 
+int is_in_alphabet(char input_char){
+    return (input_char >= ALP_START && input_char <= MAX_CHR);
+}
 
 int main(){
-    int input;
+    char input_char;
     int current_state=1;
 
-    while(input= fgetc(stdin)){
+    while(1){
         busy();
+        if (1> read(STDIN_FILENO, &input_char, 1)) break;
 
-
-        char input_char = (char) input;
-
-        if ( input_char >= ALP_START && input_char <= MAX_CHR){
+        if (is_in_alphabet(input_char)){
             int prev_state = current_state;
-            current_state = trans[current_state][input - ALP_START];
+            current_state = trans[current_state][input_char - ALP_START];
 
             if (current_state){
-                trans_counter[ prev_state * ALP_SIZE + (input-ALP_START)]++;
+                trans_counter[ prev_state * ALP_SIZE + (input_char-ALP_START)]++;
             } else {
                 //printf("%c entering error", input);
                 //break;
