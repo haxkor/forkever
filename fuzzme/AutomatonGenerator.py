@@ -1,5 +1,5 @@
-ALP_SIZE = 7
-STATE_SIZE = 8
+ALP_SIZE = 6
+STATE_SIZE = 7
 
 a = "a"
 b = "b"
