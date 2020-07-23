@@ -722,33 +722,6 @@ class ProcessWrapper:
             result = str(e)
         return result
 
-    def getrlimit(self, resource):
-        segment = self.get_own_segment() + 0x100
-        proc = self.ptraceProcess
-
-        regs = proc.getregs()
-
-        struct_ad = proc.getreg("rsp") - 0x100
-        print("struct ad = %x" % struct_ad)
-        print(proc.readBytes(struct_ad, 100))
-
-        proc.setreg("rax", 97)
-        proc.setreg("rdi", resource)
-        proc.setreg("rsi", struct_ad)
-        proc.setInstrPointer(segment)
-        proc.writeBytes(segment, inject_syscall_instr)
-
-        proc.singleStep()
-        proc.waitEvent()
-
-        rax = proc.getreg("rax")
-        import errno
-
-        print("rax = %x" % rax, errno.errorcode[-(rax - 2 ** 64)] if rax > 100 else rax)
-
-        print("ip = %x" % proc.getInstrPointer())
-
-        print(proc.readBytes(struct_ad, 100))
 
     def get_own_segment(self, address=None):
         """injects an MMAP syscall so we get our own page for code"""
