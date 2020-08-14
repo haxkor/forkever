@@ -38,7 +38,7 @@ You can adjust behavior further by fiddling in *Constants.py*
 # B U G S ?
 
 ~~Incase~~ Once you find them, please open up an issue on Github 
-or send me a mail to *jasper.ruehl@tum.de* 
+
    
 ## small demo
 
