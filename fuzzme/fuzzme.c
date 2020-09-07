@@ -6,7 +6,8 @@
 #define ALP_SIZE 6
 #define STATES_SIZE 10
 #define MAX_CHR (ALP_START + ALP_SIZE - 1)
-#define BUSY_COUNT 0x40000
+
+
 
 int trans[][7] = {
 { 0, 0, 0, 0, 0, 0, 0, },
@@ -30,9 +31,9 @@ int count_edges(){
     return result;
 }
 
+#define BUSY_COUNT 0x100000
 void busy(){
-    for (volatile int i=0; i< BUSY_COUNT; i++){};
-    return;
+    for (int i=0; i< BUSY_COUNT; i++){};
 }
 
 int is_in_alphabet(char input_char){

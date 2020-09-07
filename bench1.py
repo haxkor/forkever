@@ -17,50 +17,71 @@ import resource
 parser=ArgumentParser()
 parser.add_argument("num_children")
 
+args= parser.parse_args()
+num_children = int(args.num_children)
+
 print( resource.getrlimit(resource.RLIMIT_NPROC))
 
 args = ["demo/vuln"]
 launch_args = LaunchArguments(args, random=False)
 dummy_poll = PaulaPoll()
 
-time_dict = dict()
-time_dict["start"] = default_timer()
-
 manager = ProcessManager(launch_args, dummy_poll)
-args= parser.parse_args()
-num_children = int(args.num_children)
-
-monitor_args = "free -s 4.6 -w".split()
-monitor = Popen(monitor_args, stdout=PIPE)
-
-top_outfile = open("top_log","wb")
-top_monitor_args = "top -b -d 0.1".split()
-top_monitor = Popen(top_monitor_args, stdout=top_outfile)
 
 root_proc = manager.getCurrentProcess()
 root_proc.insertBreakpoint("main")
 root_proc.cont()
 new_procs = []
 
-time_dict["launch"] = default_timer()
+
+
+time_dict = dict()
+time_dict["start"] = default_timer()
+
+#time_dict["launch"] = default_timer()
 #root_proc.getrlimit(1)
 
 #new_procs = [root_proc.forkProcess() for _ in range(num_children)]
 
+PRINT_EVERY = 100000
+RECOVER_EVERY = 20099
+RECOVER_TIME = 2
+
+log_file = open("speedresults/%dx%d" % (RECOVER_EVERY, RECOVER_TIME),"a")
+
+recovered = 0
+side_timer = 0
+start_time = default_timer()
+time_dict["launch"] = start_time
 for i in range(num_children):
     try:
-        new_procs.append( root_proc.forkProcess())
-        if i%(num_children//10) == 0:
-            print(i)
+        new_procs.append(root_proc.forkProcess())
+        if i % PRINT_EVERY == 0:
+            curr_time = default_timer()
+            print("%d %s" % (i, curr_time-start_time-side_timer - recovered*RECOVER_TIME), file=log_file)
+            side_timer += default_timer() - curr_time
+
+        if i % RECOVER_EVERY == 0 and i:
+            sleep(RECOVER_TIME)
+            recovered+=1
+            #start_time = default_timer()
 
     except BaseException as e:
-        print(i)
+        print("%d %s" % (i, default_timer() - start_time - side_timer), file=log_file)
         num_children = i
         print( new_procs[-2].getPid())
         break
         #raise e
 
+log_file.close()
+
 time_dict["done"] = default_timer()
+
+with open("speedresults/avg", "a") as avg_file:
+    print("average=", (time_dict["done"] - time_dict["launch"] - recovered*RECOVER_TIME - side_timer)/ num_children, "   %dx%d" % (RECOVER_EVERY, RECOVER_TIME), file=avg_file)
+
+manager.quit()
+exit()
 
 monitor.kill()
 sleep(1)
@@ -84,7 +105,6 @@ for line in monitor_log:
             free_outputs.append(single_result)
             single_result=b""
 
-print("average=", (time_dict["done"] - time_dict["launch"])/ num_children)
 
 def parse_free_output(output:bytes):
     r= dict()

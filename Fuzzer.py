@@ -1,6 +1,5 @@
 from operator import itemgetter
 import random
-random.seed(5)
 
 from numpy.random import geometric, seed as npseed
 
@@ -109,8 +108,7 @@ class Fuzzer:
 
             if i % LOG_EVERY == 0:
                 #warning(self.scores)
-                print(self.__class__, "gen %d" % i, self.scores[0], default_timer()-time_start,
-                      "seed= %d, DO_SYSCALL= %d" % (seed, DO_SYSCALL), file=log_file)
+                print("%d" % i, default_timer()-time_start,  self.scores[0], file=log_file)
 
         self.trimGeneration()
         return self.scores
@@ -207,7 +205,7 @@ class FuzzerForkserver(Fuzzer):
         return results
 
     def __del__(self):
-        with redirect_stderr(out_file):
+        with redirect_stdout(out_file):
             self.manager.debugger.quit()
 
 
@@ -301,14 +299,17 @@ class ForkFuzzer(Fuzzer):
         with redirect_stdout(out_file):
             self.manager.debugger.quit()
 
+        log_file.close()
+
         warning("spawned procs = %d" % self.spawned_procs)
-        print("forkfuzzer spawned procs = %d" % self.spawned_procs, file=log_file)
+        print("forkfuzzer spawned procs = %d" % self.spawned_procs)
 
 
 import resource
 
 soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
 soft_filelimit = soft * 256
+soft_filelimit = hard
 resource.setrlimit(resource.RLIMIT_NOFILE, (soft_filelimit, hard))
 print("set filelimit")
 
@@ -332,26 +333,28 @@ def time_fuzzer(fuzzerClass: type, path: str, num_gens: int):
 
 from sys import argv
 
-
-path = "fuzzme/fuzzme_busy4_read"
+busy = argv[4] if len(argv) > 4 else "5"
+path = "fuzzme/fuzzme_busy%s_read" % busy
 num_gens = int(argv[2] if len(argv)>2 else 30)
 
 ind = int(argv[1])
 seed = int(argv[3] if len(argv) > 3 else 1)
-to_test = [ForkFuzzer, NaiveFuzzer, NaiveFuzzerForkever, FuzzerForkserver][ind]
+fuzzerlist = [ForkFuzzer, NaiveFuzzer, NaiveFuzzerForkever, FuzzerForkserver]
+to_test = fuzzerlist[ind]
 
-log_file = open("fuzzme/results%d-%d" % (ind, seed), "a")
+log_file = open("fuzzme/results_%s/results%s-seed%d-DOSYS%d--%s" % (busy, str(to_test)[6:], seed, DO_SYSCALL, random.randint(0,9999)), "a")
 out_file = open("/dev/null", "w")
 
 for num_gens in [num_gens+1]: #range(30,90,5):
     random.seed(seed)
     npseed(seed)
 
-    if redirect:
-        with redirect_stdout(out_file):
+    with redirect_stdout(out_file):
+        try:
             result = time_fuzzer(to_test, path, num_gens)
-    else:
-        result = time_fuzzer(to_test, path, num_gens)
+        except OSError as e:
+            log_file.close()
+            raise e
 
     #print(str(to_test),"num_gens = %d" % num_gens, result[0][0], result[1], "seed = %d" % seed, "DO_SYSCALL = %d" % DO_SYSCALL, file=log_file)
     os.closerange(out_file.fileno()+1, soft_filelimit)

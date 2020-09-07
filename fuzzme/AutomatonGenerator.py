@@ -1,5 +1,5 @@
 ALP_SIZE = 6
-STATE_SIZE = 7
+STATE_SIZE = 8
 
 a = "a"
 b = "b"
@@ -54,7 +54,40 @@ trans[5] = [([e], 6)]
 trans[6] = [([c, d], 7)]
 trans[7] = [([f], 8), ([a,b], 1)]
 
-result = makeAutomaton(State(transitem, i) for (i,transitem) in enumerate(trans))
+#result = makeAutomaton(State(transitem, i) for (i,transitem) in enumerate(trans))
 
+#print(result)
+
+def makeAutomatonLatex(state_list):
+
+    # \node[state,initial] (q_0)   {$q_0$};
+    res = "".join( "\\node[state] (q%d) {$q%d$};\n" % (state.id,state.id) for state in state_list)
+
+
+    res += "\path[->]\n"
+
+    def make_trans(state:State):
+        pref = "(q%d) " % state.id
+        for i,target in enumerate(state.trans):
+            if target==0:
+                continue
+            if target==state.id:
+                pref += "edge [loop above] node {%s} ()" % ( chr(ord(a) + i))
+            else:
+                pref += "edge node {%s} (q%d)" % ( chr(ord(a) + i), target)
+
+            pref += "\n"
+
+        return pref
+
+    return res + "".join(make_trans(s) for s in state_list)
+
+automaton = [ State(transitem, i) for (i,transitem) in enumerate(trans)]
+
+result = makeAutomatonLatex(automaton)
 print(result)
+
+
+
+
 
