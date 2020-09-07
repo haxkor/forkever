@@ -3,6 +3,8 @@ from itertools import groupby
 import pwn
 from weakref import ref
 
+from operator import itemgetter
+
 from logging2 import debug
 # from ProcessWrapper import ProcessWrapper
 from utilsFolder.Parsing import parseInteger
@@ -77,7 +79,7 @@ class ProgramInfo:
 
         elf = self._getElf(lib)
 
-        #print(elf.symbols)
+        # print(elf.symbols)
 
         find_cands = lambda x: symbol in x
         candidates = list(filter(find_cands, elf.symbols.keys()))
@@ -102,23 +104,38 @@ class ProgramInfo:
 
     def getElfStart(self):
         """returns virtual address of where the ELF starts"""
-        starts= [mapping.start for mapping in getMappings(self.pid, self.path_to_hack)]
+        starts = [mapping.start for mapping in getMappings(self.pid, self.path_to_hack)]
         return min(starts)
 
-
     def where(self, ip: int):
-        """ finds the symbol for the respective virtual adress"""
-        from operator import itemgetter
+        """ finds the symbol for the respective virtual adress
+
+        Some segments are mapped without a name, such as the data segment of a library.
+        When cycling through the found mappings, we take the pathname from the mapping right before the one
+        where the virtual address resides incase there is no name.
+
+        Example: libc:free_hook"""
+
         found = None
+        above = None    # this is returned incase the found mapping itself has no name
+
         for mapping in getMappings(self.pid):
             if mapping.start <= ip <= mapping.end:
                 found = mapping
+
+            if mapping.end <= ip and mapping.pathname is not None and \
+                    (above is None or mapping.end > above.end):
+                above = mapping
+
+        debug("found = %s, above = %s" % (found, above))
+
         if not found:
-            # TODO libc has a segment (where free_hook is) that has no name in maps
-            raise ValueError("adress is not in virtual adress space")
+            raise ValueError("address is not in virtual adress space")
+
+        if found.pathname is None and above.end == found.start:
+            found=above
 
         # find smaller symbols
-        debug(found.pathname)
         elf = self._getElf(found.pathname)
         symbols = list((symbolname, symbol_ad + elf.base) for
                        (symbolname, symbol_ad) in elf.symbols.items())

@@ -1,5 +1,6 @@
 from typing import List
 import re
+from logging2 import debug
 
 PROC_MAP_REGEX = re.compile(
     # Address range: '08048000-080b0000 '
@@ -43,6 +44,9 @@ class MemoryMappingSimple(object):
         self.inode = inode
         self.pathname = pathname
 
+    def __str__(self):
+        return "%s: %x-%x" % (self.pathname, self.start, self.end)
+
 
 def makeMapObj(line: str) -> MemoryMappingSimple:
     line = line.rstrip()
@@ -59,8 +63,10 @@ def makeMapObj(line: str) -> MemoryMappingSimple:
 
 
 def getMappings(pid: int, filterstr="") -> List[MemoryMappingSimple]:
+    debug("getMappings filterstr=%s" % filterstr)
     with open("/proc/%d/maps" % pid, "r") as maps:
-        func = lambda line: filterstr in line
-        result= list(makeMapObj(line) for line in filter(func, maps.readlines()))
+        def func(line): return filterstr in line
+        result = list(makeMapObj(line)
+                      for line in filter(func, maps.readlines()))
 
     return result

@@ -23,7 +23,9 @@ def main():
 
     p = ArgumentParser()
     p.add_argument("-init", help="Pass a file for initial commands")
-    p.add_argument("-rand", action="store_true", help="to enable randomization")  # randomization disabled by default
+    # randomization disabled by default
+    p.add_argument("-rand", action="store_true",
+                   help="to enable randomization")
     p.add_argument("-sock", action="store_true",                                  # no socket by default
                    help="if you want to communicate with the program via a socket. (Adjust in Constants.py)")
     p.add_argument("runargs", nargs=REMAINDER)
@@ -31,7 +33,8 @@ def main():
     parsed_args = p.parse_args()
     launch_args = LaunchArguments(parsed_args.runargs, parsed_args.rand)
 
-    handler = InputHandler(launch_args, startupfile=parsed_args.init, inputsock=parsed_args.sock)
+    handler = InputHandler(
+        launch_args, startupfile=parsed_args.init, inputsock=parsed_args.sock)
 
     try:
         handler.inputLoop()
@@ -46,7 +49,7 @@ def main():
     except BaseException as e:
         print("oh noes, a bug! please copy everything and send it to haxkor")
         print(handler.manager.family())
-        handler.manager.quit() # otherwise launched children stay alive
+        handler.manager.quit()  # otherwise launched children stay alive
         raise e
 
 
