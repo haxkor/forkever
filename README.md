@@ -50,10 +50,10 @@ You can adjust behavior further by fiddling in *Constants.py*, but be careful! ;
 ## small demo
 
 ![Forkever](https://github.com/haxkor/forkever/blob/master/docs/Screenshot1.png?raw=true)
-  
-see docs/demo.mp4 for a video
 
- 
+###### video demo
+[vimeo](vimeo.com/474336367)
+  
 ### install
     pip install pwntools
     git clone https://github.com/haxkor/forkever
