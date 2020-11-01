@@ -17,7 +17,6 @@ Given a binary that you want to exploit, Forkever is a debugger that lets you
 Forkever was developed with heap exploitation in mind, and has already assisted students of the BX course at TUM.
 Further, it helped with [solving a 0CTF challenge](https://hxp.io/blog/77/0CTF-Finals-2020-babyheap/).
 
-![Forkever](https://github.com/haxkor/forkever/blob/master/docs/Screenshot1.png?raw=true)
 
     
 ##### Launch Forkever:
@@ -50,42 +49,8 @@ You can adjust behavior further by fiddling in *Constants.py*, but be careful! ;
 
 ## small demo
 
-    root@sudo> /forkever.py demo/vuln
-    type ? for help
-    b main
-    c
-    hit breakpoint at 0x5555555557af
-    si
-    RIP = main + 0x1
-    malloc 1337
-    malloc returned 0x555555559260
-    fork aftermalloc
-    switched to 7832
-    RIP = main + 0x1
-    free $rax+31337
-    [ERR] b'free(): invalid pointer\r\n'
-    fork tryagain
-    switched to 7854
-    RIP = main + 0x1
-    free 0x555555559260
-    free returned 0x0
-    c
-    process requests 31 bytes from stdin
-    no data to stdin was provided
-    [OUT] b'1. malloc\r\n2. realloc\r\n3. free\r\n4. calloc\r\n5. aligned_alloc\r\n6. posix_memalign\r\n7. read\r\n8. write\r\n9. exit\r\n> '
-    tree
-    7813  (aftermallocp)
-    |-- 7832  (aftermalloc)
-    +-- 7854  (tryagain)
-
-    switch up
-    switched to 7813
-    RIP = main + 0x1
-    c
-    hyx stack [i:i]
-   
-    
-    
+![Forkever](https://github.com/haxkor/forkever/blob/master/docs/Screenshot1.png?raw=true)
+  
 
  
 ### install
