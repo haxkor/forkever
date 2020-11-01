@@ -1,0 +1,5 @@
+b main
+c
+malloc 1
+call libc:setbuf 0x0007ffff7f93760 0
+hyx

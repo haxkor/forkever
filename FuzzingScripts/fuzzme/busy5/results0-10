@@ -1,0 +1,26 @@
+<class '__main__.ForkFuzzer'> gen 0 ('a', -9, -9) 0.011307208998914575 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 5 ('ca', 2, 2.0) 0.08727003300009528 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 10 ('caab', 3, 2.6) 0.26814529200055404 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 15 ('caaeb', 5, 5.0) 0.4789945189986611 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 20 ('caaeb', 5, 5.0) 0.7907820389991684 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 25 ('caaebda', 7, 7.0) 1.1552065340001718 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 30 ('caaebda', 7, 7.0) 1.4669397239995305 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 35 ('caaebda', 7, 7.0) 1.9439017520016932 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 40 ('caaebda', 7, 7.0) 2.439391831001558 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 45 ('caaebda', 7, 7.0) 3.0135521449992666 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 50 ('caaebdab', 8, 8.0) 3.69388148500002 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 55 ('caaebdab', 8, 8.0) 4.414456760998291 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 60 ('caaebdab', 8, 8.0) 5.197064079999109 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 65 ('caaebdab', 8, 8.0) 6.05174324499967 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 70 ('caaebdab', 8, 8.0) 6.850776570998278 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 75 ('caaebdab', 8, 8.0) 7.672891786998662 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 80 ('caaebdab', 8, 8.0) 8.669821994000813 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 85 ('cebcbadab', 9, 9.0) 9.635849243000848 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 90 ('cebcbadab', 9, 9.0) 10.81070249899858 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 95 ('cebcbadab', 9, 9.0) 11.958768060998409 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 100 ('cebcbadab', 9, 9.0) 13.103661550001561 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 105 ('cebcbadab', 9, 9.0) 14.342921826999373 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 110 ('cebcbadab', 9, 9.0) 15.688297988999693 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 115 ('cebcbadab', 9, 9.0) 17.086011357001553 seed= 10, DO_SYSCALL= 0
+<class '__main__.ForkFuzzer'> gen 120 ('cebcbadab', 9, 9.0) 18.466477722999116 seed= 10, DO_SYSCALL= 0
+forkfuzzer spawned procs = 10110
