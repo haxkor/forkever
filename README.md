@@ -51,6 +51,7 @@ You can adjust behavior further by fiddling in *Constants.py*, but be careful! ;
 
 ![Forkever](https://github.com/haxkor/forkever/blob/master/docs/Screenshot1.png?raw=true)
   
+see docs/demo.mp4 for a video
 
  
 ### install
