@@ -15,7 +15,7 @@ Given a binary that you want to exploit, Forkever is a debugger that lets you
 
 
 Forkever was developed with heap exploitation in mind, and has already assisted students of the BX course at TUM.
-Further, it helped with [solving a 0CTF challenge](https://hxp.io/blog/77/0CTF-Finals-2020-babyheap/).
+Further, it helped with [solving a TSG-CTF challenge](https://hxp.io/blog/75/TSG-CTF-2020-Karte/).
 ## small demo
 
 ![Forkever](https://github.com/haxkor/forkever/blob/master/docs/Screenshot1.png?raw=true)
