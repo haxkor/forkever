@@ -1,6 +1,12 @@
 from signal import SIGCHLD
 from pwn import asm
-from ptrace.tools import locateProgram
+from os.path import realpath
+
+_self_dir,_,_ = realpath(__file__).rpartition("/")
+_self_dir += "/"
+hyx_path = _self_dir + "../hyx4forkever/hyx"
+path_launcher = _self_dir + "launcher/launcher"
+socketname = "/tmp/forkever_hyx_sock"
 
 # relevant for communication with hyx
 UPD_FROMBLOB = b"\x40"
@@ -26,10 +32,6 @@ COLOR_NORMAL = "\033[m"
 COLOR_CURRENT_PROCESS = "\033[0;31m"  # red
 COLOR_TERMINATED_PROCESS = "\033[0;34m"  # blue
 
-hyx_path = locateProgram("../hyx4forkever/hyx")
-path_launcher = "launcher/launcher"
-socketname = "/tmp/forkever_hyx_sock"
-
 # this will be used to launch hyx, set to "None" and the command will be printed out so you can launch it yourself
 runargs = ["x-terminal-emulator", "-e"]  # , "-e"]
 
@@ -43,7 +45,6 @@ CONT_AFTER_WRITE = True     # no need to explicitly continue after writing to st
 # if this is true, you need to be careful to not continue on a process that is waiting on another process.
 # It also isnt really tested
 FOLLOW_NEW_PROCS = False
-
 
 # when looking up a symbol, other symbols matching the lookup will be printed
 PRINT_OTHER_CANDIDATES = False
